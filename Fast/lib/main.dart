@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/app_state.dart';
 import 'screens/home_screen.dart';
+import 'screens/auth/phone_auth_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,18 +19,23 @@ void main() async {
     debugPrint('⚠️ خطأ في اتصال Supabase: $e');
   }
 
+  // التحقق من جلسة المستخدم لمنع تكرار شاشة تسجيل الدخول
+  final prefs = await SharedPreferences.getInstance();
+  final bool isUserLoggedIn = prefs.getBool('is_logged_in') ?? false;
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppState()),
       ],
-      child: const FastApp(),
+      child: FastApp(isUserLoggedIn: isUserLoggedIn),
     ),
   );
 }
 
 class FastApp extends StatelessWidget {
-  const FastApp({Key? key}) : super(key: key);
+  final bool isUserLoggedIn;
+  const FastApp({Key? key, required this.isUserLoggedIn}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +69,7 @@ class FastApp extends StatelessWidget {
           foregroundColor: Colors.amber,
         ),
       ),
-      home: const HomeScreen(),
+      home: isUserLoggedIn ? const HomeScreen() : const PhoneAuthScreen(),
     );
   }
 }
