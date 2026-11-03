@@ -1,0 +1,49 @@
+workflows:
+  taiz-express-android-apk:
+    name: Taiz Express - Android APK
+    max_build_duration: 90
+    environment:
+      flutter: stable
+      vars:
+        PACKAGE_NAME: "com.taizexpress.taiz_express"
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/.gradle/caches
+        - ~/.gradle/wrapper
+    scripts:
+      - name: Check Flutter environment
+        script: |
+          set -e
+          flutter --version
+          java -version
+      - name: Prepare official Gradle wrapper
+        script: |
+          set -e
+          if [ ! -f android/gradle/wrapper/gradle-wrapper.jar ]; then
+            SEED_DIR="$(mktemp -d)"
+            flutter create --platforms=android --org com.taizexpress --project-name taiz_express "$SEED_DIR/seed"
+            mkdir -p android/gradle/wrapper
+            cp "$SEED_DIR/seed/android/gradlew" android/gradlew
+            cp "$SEED_DIR/seed/android/gradlew.bat" android/gradlew.bat
+            cp "$SEED_DIR/seed/android/gradle/wrapper/gradle-wrapper.jar" android/gradle/wrapper/gradle-wrapper.jar
+            rm -rf "$SEED_DIR"
+          fi
+          chmod +x android/gradlew
+      - name: Configure Android SDK paths
+        script: |
+          set -e
+          FLUTTER_SDK="${FLUTTER_ROOT:-$(dirname "$(dirname "$(command -v flutter)")")}"
+          ANDROID_SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [ -z "$ANDROID_SDK" ]; then
+            echo "ANDROID_SDK_ROOT/ANDROID_HOME is not configured on the build machine."
+            exit 1
+          fi
+          printf 'flutter.sdk=%s\nsdk.dir=%s\n' "$FLUTTER_SDK" "$ANDROID_SDK" > android/local.properties
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Build release APK
+        script: flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+      - flutter_drive.log
