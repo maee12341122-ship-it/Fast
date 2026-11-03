@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // مهم جداً لإغلاق التطبيق عبر SystemNavigator.pop()
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../models/cart_item_model.dart';
@@ -35,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // نافذة تأكيد الخروج مع إغلاق التطبيق تماماً عند الضغط على "نعم"
   void showExitConfirmationDialog(BuildContext context, Color cardBg, Color textColor) {
     showDialog(
       context: context,
@@ -61,7 +63,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(context); // إغلاق نافذة الحوار
+                SystemNavigator.pop();  // إغلاق التطبيق تماماً من الجهاز
               },
               child: const Text('نعم', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
             ),
@@ -149,7 +152,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
 
-    // تفعيل الألوان الديناميكية للوضع الفاتح والداكن
     final themeBg = appState.isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
     final cardBg = appState.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
     final textColor = appState.isDarkMode ? Colors.white : Colors.black87;
@@ -217,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           obscureText: true,
                           style: TextStyle(color: textColor, fontSize: 14),
                           decoration: const InputDecoration(
-                            hintText: 'أدخل كلمة السر الخاصة بك',
+                            hintText: 'أدخل كلمة المرور الخاصة بك',
                             hintStyle: TextStyle(color: Colors.grey),
                           ),
                         ),
@@ -231,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               } else {
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('كلمة السر غير صحيحة!')),
+                                  const SnackBar(content: Text('كلمة المرور غير صحيحة!')),
                                 );
                               }
                             },
@@ -827,7 +829,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         }),
-        // 4. مشاركة التطبيق باستخدام Share Plus لنظام التشغيل
         _buildProfileItem(Icons.share, 'مشاركة التطبيق مع الأصدقاء', cardBg, textColor, () {
           appState.shareApp();
         }),
@@ -847,7 +848,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         }),
-        // 3. إزالة الرقم الشخصي واستبداله برقم الدعم العام الموحد
         _buildProfileItem(Icons.phone, 'اتصل بخدمة العملاء والدعم', cardBg, textColor, () {
           showDialog(
             context: context,
