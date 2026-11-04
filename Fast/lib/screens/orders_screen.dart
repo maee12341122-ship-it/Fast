@@ -5,7 +5,7 @@ import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import '../widgets/empty_state.dart';
 
-// متغير بسيط لتتبع الطلبات التي تم عرض نافذة التسعير لها لمنع تكرارها
+// متغير لتتبع الطلبات التي تم عرض نافذة التسعير لها لمنع تكرارها
 final Set<String> _processedPricingOrders = {};
 
 class OrdersScreen extends StatelessWidget {
@@ -14,7 +14,7 @@ class OrdersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 👈 استخدام watch لجعل الشاشة تحدث نفسها تلقائياً وفوراً لحظة وصول التحديث من السيرفر
+    // 👈 استخدام watch لجعل شاشة طلبات العميل تتحدث تلقائياً وفوراً لحظة وصول التحديث
     final orders = context.watch<AppState>().customerOrders;
     
     return Scaffold(
@@ -47,7 +47,7 @@ class OrdersScreen extends StatelessWidget {
     final assignedCourier = order is Map ? (order['assigned_courier']?.toString() ?? 'لم يتم التعيين') : order.assignedCourier;
     final adminMessage = order is Map ? (order['admin_message']?.toString() ?? '') : '';
 
-    // إظهار نافذة التسعير للعميل تلقائياً وفوراً بمجرد أن يرسلها المشرف (مرة واحدة فقط لكل طلب)
+    // إظهار نافذة التسعير للعميل تلقائياً وفوراً بمجرد أن يرسلها المشرف (مرة واحدة لكل طلب)
     if (status == 'pricingSentToCustomer' && !_processedPricingOrders.contains(orderId)) {
       _processedPricingOrders.add(orderId);
       WidgetsBinding.instance.addPostFrameCallback((_) {
