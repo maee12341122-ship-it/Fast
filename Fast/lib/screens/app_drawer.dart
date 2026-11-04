@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import 'delivery_login_screen.dart';
-import 'edit_profile_screen.dart'; // 👈 استدعاء صفحة تعديل الحساب
+import 'edit_profile_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   final ValueChanged<int> onNavigate;
@@ -15,66 +15,83 @@ class AppDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final user = state.user;
+
     return Drawer(
+      backgroundColor: const Color(0xFF121212),
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface),
-            accountName: Text(user?.name ?? 'زائر تعز إكسبرس', style: const TextStyle(color: AppConstants.gold)),
-            accountEmail: Text(user?.phone ?? 'لم يتم تسجيل رقم هاتف', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            decoration: const BoxDecoration(
+              color: Color(0xFF1E1E1E),
+            ),
+            accountName: Text(
+              user?.name ?? 'زائر تعز إكسبرس',
+              style: const TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            accountEmail: Text(
+              user?.phone ?? 'لم يتم تسجيل رقم هاتف',
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
             currentAccountPicture: const CircleAvatar(
               backgroundColor: AppConstants.gold,
-              child: Icon(Icons.person, color: Colors.black, size: 34),
+              child: Icon(Icons.person, color: Colors.black, size: 36),
             ),
           ),
-          _item(context, Icons.person_outline, 'حسابي', () => onNavigate(3)),
           
-          // 👈 إضافة زر تعديل الحساب والموقع هنا
+          _item(context, Icons.person_outline, 'حسابي', () => onNavigate(3)),
           _item(context, Icons.edit_location_alt, 'تعديل الحساب والموقع', () {
-            Navigator.pop(context); // إغلاق القائمة الجانبية
+            Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const EditProfileScreen()),
             );
           }),
-
           _item(context, Icons.receipt_long, 'طلباتي', () => onNavigate(2)),
+          
+          const Divider(color: Colors.white12, height: 20),
+
           _item(context, Icons.location_city, 'تغيير المدينة (تعز)', () {
             Navigator.pop(context);
             _showMessage(context, 'الخدمة الحالية متاحة في مدينة تعز فقط.');
           }),
           _item(context, Icons.phone, 'تواصل معنا', () {
             Navigator.pop(context);
-            _showMessage(context, 'بيانات التواصل الرسمية غير مضافة بعد. أضف رقم الدعم قبل نشر التطبيق.');
+            _showMessage(context, 'بيانات التواصل الرسمية غير مضافة بعد.');
           }),
           _item(context, Icons.privacy_tip_outlined, 'سياسة الخصوصية', () {
             Navigator.pop(context);
             _showTextDialog(context, 'سياسة الخصوصية',
-                'في نسخة المرحلة الأولى تُحفظ بيانات التجربة محلياً على الجهاز. لا توجد مزامنة سحابية أو نظام صلاحيات خادمي بعد. لا تضع بيانات عملاء حقيقية قبل إعداد الخادم وقواعد الأمان.');
+                'في نسخة المرحلة الأولى تُحفظ بيانات التجربة محلياً على الجهاز. لا توجد مزامنة سحابية أو نظام صلاحيات خادمي بعد.');
           }),
           _item(context, Icons.share, 'مشاركة التطبيق', () async {
             await Clipboard.setData(const ClipboardData(text: 'تعز إكسبرس - Taiz Express'));
             if (context.mounted) {
               Navigator.pop(context);
-              _showMessage(context, 'تم نسخ اسم التطبيق. أضف رابط المتجر بعد نشر التطبيق.');
+              _showMessage(context, 'تم نسخ اسم التطبيق بنجاح! 🚀');
             }
           }),
-          _item(context, Icons.info_outline, 'نبذة عن التطبيق وكيفية استخدامه', () {
+          _item(context, Icons.info_outline, 'نبذة عن التطبيق', () {
             Navigator.pop(context);
             _showTextDialog(context, 'عن تعز إكسبرس',
-                'تعز إكسبرس تطبيق توصيل تجريبي يجمع المطاعم والبقالات والخضار والفواكه والصيدلية والطلبات الخاصة في واجهة واحدة. هذه نسخة تطوير محلية للمرحلة الأولى.');
+                'تعز إكسبرس تطبيق توصيل تجريبي يجمع المطاعم والبقالات والخضار والفواكه والصيدلية والطلبات الخاصة في واجهة واحدة.');
           }),
+          
+          const Divider(color: Colors.white12, height: 20),
+
           _item(context, Icons.delivery_dining, 'تسجيل دخول المندوبين', () {
             Navigator.pop(context);
             Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DeliveryLoginScreen()));
           }),
           _item(context, Icons.brightness_6, 'مظهر التطبيق', () => _showThemeDialog(context, state)),
-          const Divider(),
+          
+          const SizedBox(height: 20),
           const Padding(
             padding: EdgeInsets.all(16),
-            child: Text('الإصدار: 2.1.0\nTaiz Express • المرحلة الأولى',
-                style: TextStyle(color: Colors.grey, fontSize: 12)),
+            child: Text(
+              'الإصدار: 2.1.0\nTaiz Express • المرحلة الأولى',
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+            ),
           ),
         ],
       ),
@@ -82,14 +99,21 @@ class AppDrawer extends StatelessWidget {
   }
 
   Widget _item(BuildContext context, IconData icon, String title, VoidCallback onTap) {
-    return ListTile(leading: Icon(icon, color: AppConstants.gold), title: Text(title), onTap: onTap);
+    return ListTile(
+      leading: Icon(icon, color: AppConstants.gold),
+      title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
+      onTap: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      dense: true,
+    );
   }
 
   void _showThemeDialog(BuildContext context, AppState state) {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('اختر مظهر التطبيق'),
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text('اختر مظهر التطبيق', style: TextStyle(color: AppConstants.gold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -106,7 +130,8 @@ class AppDrawer extends StatelessWidget {
     return RadioListTile<ThemeMode>(
       value: mode,
       groupValue: state.themeMode,
-      title: Text(label),
+      title: Text(label, style: const TextStyle(color: Colors.white)),
+      activeColor: AppConstants.gold,
       onChanged: (value) {
         if (value != null) state.setThemeMode(value);
         Navigator.pop(context);
@@ -122,9 +147,15 @@ class AppDrawer extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: Text(title, style: const TextStyle(color: AppConstants.gold)),
+        content: Text(message, style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext), 
+            child: const Text('إغلاق', style: TextStyle(color: AppConstants.gold)),
+          ),
+        ],
       ),
     );
   }
