@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -7,7 +8,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
-    // طلب أذن الإشعارات من المستخدم (مهم جداً لأندرويد 13+ و iOS)
+    // طلب أذن الإشعارات من المستخدم
     NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
@@ -29,8 +30,8 @@ class NotificationService {
 
     await _localNotificationsPlugin.initialize(initializationSettings);
 
-    // الاستماع للإشعارات الواردة أثناء فتح التطبيق
-    FirebaseMessaging.onMessage.ogat((RemoteMessage message) {
+    // الاستماع للإشعارات الواردة أثناء فتح التطبيق (تم التصحيح هنا لـ listen)
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       RemoteNotification? notification = message.notification;
       AndroidNotification? android = message.notification?.android;
 
@@ -46,7 +47,7 @@ class NotificationService {
               channelDescription: 'قناة إشعارات طلبات توصيل Fast',
               importance: Importance.max,
               priority: Priority.high,
-              color: Color(0xFFFFC107), // لون ذهبي متناسق مع هويتنا
+              color: Color(0xFFFFC107), // لون ذهبي متناسق
               icon: '@mipmap/ic_launcher',
             ),
           ),
@@ -54,7 +55,7 @@ class NotificationService {
       }
     });
 
-    // جلب التوكن الخاص بالجهاز (لإرسال إشعارات موجهة لهذا المستخدم عبر Supabase أو Firebase)
+    // جلب التوكن الخاص بالجهاز
     String? token = await FirebaseMessaging.instance.getToken();
     debugPrint('📱 FCM Token: $token');
   }
