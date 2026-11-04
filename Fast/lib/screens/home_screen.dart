@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // مهم جداً لإغلاق التطبيق عبر SystemNavigator.pop()
+import 'package:flutter/services.dart'; // مهم لإغلاق التطبيق نهائياً عبر SystemNavigator.pop()
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../models/cart_item_model.dart';
@@ -63,8 +63,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
               onPressed: () {
-                Navigator.pop(context); // إغلاق نافذة الحوار
-                SystemNavigator.pop();  // إغلاق التطبيق تماماً من الجهاز
+                Navigator.pop(context); // إغلاق نافذة الحوار أولاً
+                SystemNavigator.pop();  // إغلاق التطبيق تماماً من جهاز المستخدم
               },
               child: const Text('نعم', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
             ),
@@ -233,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               } else {
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('كلمة المرور غير صحيحة!')),
+                                  const SnackBar(content: Text('كلمة السر غير صحيحة!')),
                                 );
                               }
                             },
@@ -254,6 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex,
             onTap: (index) {
+              // اشتراط تسجيل الدخول والـ OTP فقط عند الانتقال إلى السلة (Index 1)
               if (index == 1 && appState.userProfile == null) {
                 Navigator.push(
                   context,
@@ -267,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 );
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('يجب تسجيل الدخول برقم الهاتف للوصول إلى السلة')),
+                  const SnackBar(content: Text('يجب تسجيل الدخول برقم الهاتف للوصول إلى السلة 🛒')),
                 );
                 return;
               }
