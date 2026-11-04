@@ -61,7 +61,13 @@ class OrdersScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('الحالة: $status'),
+                  // --- إدراج الخط الزمني هنا ليتتبع العميل حالة طلبه بصرياً ---
+                  const Text('مراحل الطلب:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppConstants.gold)),
+                  const SizedBox(height: 8),
+                  buildOrderStatusTimeline(status),
+                  const Divider(height: 20),
+
+                  Text('الحالة الحالية: $status'),
                   if (adminMessage.isNotEmpty) ...[
                     const SizedBox(height: 5),
                     Text('ملاحظة الإدارة: $adminMessage', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
@@ -85,6 +91,42 @@ class OrdersScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  // --- دالة رسم الخط الزمني لحالة الطلب ---
+  Widget buildOrderStatusTimeline(String status) {
+    int getStepIndex() {
+      switch (status) {
+        case 'waitingForPricing': return 0;
+        case 'pricingSentToCustomer': return 1;
+        case 'waitingCourierApproval': return 2;
+        case 'onTheWay': return 3;
+        case 'arrived': return 4;
+        case 'delivered': return 5;
+        default: return 0;
+      }
+    }
+
+    final steps = ['التسعير', 'الرسوم', 'التأكيد', 'الطريق', 'الوصول', 'التسليم'];
+    int currentStep = getStepIndex();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: List.generate(steps.length, (index) {
+        bool isDone = index <= currentStep;
+        return Column(
+          children: [
+            CircleAvatar(
+              radius: 10,
+              backgroundColor: isDone ? AppConstants.gold : Colors.grey[700],
+              child: isDone ? const Icon(Icons.check, size: 12, color: Colors.black) : null,
+            ),
+            const SizedBox(height: 4),
+            Text(steps[index], style: TextStyle(fontSize: 9, color: isDone ? AppConstants.gold : Colors.grey)),
+          ],
+        );
+      }),
     );
   }
 }
