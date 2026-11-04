@@ -88,6 +88,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                   ),
                   const SizedBox(height: 20),
 
+                  // ---------------- المرحلة الأولى: إدخال رقم الهاتف ----------------
                   if (!_isOtpSent && !_isProfileStep) ...[
                     const Text(
                       'تسجيل الدخول / حساب جديد',
@@ -105,8 +106,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       keyboardType: TextInputType.phone,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        // تم إزالة رقمك الشخصي واستبداله بمثال عام افتراضي
-                        labelText: 'رقم الهاتف (مثال: 770000000)',
+                        labelText: 'رقم الهاتف', // تم إزالة التلميح المزعج بناءً على طلبك
                         labelStyle: const TextStyle(color: Colors.grey),
                         prefixIcon: const Icon(Icons.phone_android, color: primaryGold),
                         filled: true,
@@ -132,9 +132,9 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                           ? null
                           : () async {
                               final phone = _phoneController.text.trim();
-                              if (phone.isEmpty) {
+                              if (phone.isEmpty || phone.length < 9) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('الرجاء إدخال رقم الهاتف')),
+                                  const SnackBar(content: Text('الرجاء إدخال رقم هاتف صحيح')),
                                 );
                                 return;
                               }
@@ -144,8 +144,10 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                               appState.requestOtpForPhone(phone);
                               await appState.sendOtpViaWhatsAppDirect(phone);
 
-                              setState(() => _isLoading = false);
-                              setState(() => _isOtpSent = true);
+                              setState(() {
+                                _isLoading = false;
+                                _isOtpSent = true;
+                              });
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('تم فتح الواتساب لإرسال رمز التحقق بنجاح! 📲')),
@@ -155,7 +157,10 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                           ? const CircularProgressIndicator(color: Colors.black)
                           : const Text('إرسال رمز التحقق عبر الواتساب', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
-                  ] else if (_isOtpSent && !_isProfileStep) ...[
+                  ]
+
+                  // ---------------- المرحلة الثانية: إدخال رمز الـ OTP مع التحقق الصارم ----------------
+                  else if (_isOtpSent && !_isProfileStep) ...[
                     const Text(
                       'أدخل رمز التحقق (OTP)',
                       style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
@@ -170,6 +175,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                     TextField(
                       controller: _otpController,
                       keyboardType: TextInputType.number,
+                      maxLength: 6,
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: primaryGold, fontSize: 22, letterSpacing: 5, fontWeight: FontWeight.bold),
                       decoration: InputDecoration(
@@ -196,23 +202,38 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       ),
                       onPressed: () {
                         final otp = _otpController.text.trim();
+                        
+                        // شرط صارم: يجب أن يكون الرمز 6 أرقام كاملة وصحيحة
+                        if (otp.length < 6) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('الرجاء إدخال الرمز المكون من 6 أرقام كاملة ❌')),
+                          );
+                          return;
+                        }
+
                         bool verified = appState.verifyOtpAndLogin(_phoneController.text.trim(), otp);
 
-                        if (verified || true) {
+                        if (verified) {
                           setState(() => _isProfileStep = true);
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('رمز التحقق غير صحيح، حاول مجدداً')),
+                            const SnackBar(content: Text('رمز التحقق غير صحيح، حاول مجدداً ❌')),
                           );
                         }
                       },
                       child: const Text('تحقق ومتابعة', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
                     TextButton(
-                      onPressed: () => setState(() => _isOtpSent = false),
+                      onPressed: () => setState(() {
+                        _isOtpSent = false;
+                        _otpController.clear();
+                      }),
                       child: const Text('تغيير رقم الهاتف', style: TextStyle(color: Colors.grey)),
                     ),
-                  ] else if (_isProfileStep) ...[
+                  ]
+
+                  // ---------------- المرحلة الثالثة: إدخال الاسم والعنوان والحفظ ----------------
+                  else if (_isProfileStep) ...[
                     const Text(
                       'استكمال البيانات الشخصية',
                       style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
@@ -271,7 +292,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () async {
-                        if (_nameController.text.isNotEmpty && _addressController.text.isNotEmpty) {
+                        if (_nameController.text.trim().isNotEmpty && _addressController.text.trim().isNotEmpty) {
                           await appState.saveUserProfileDetails(
                             _nameController.text.trim(),
                             _addressController.text.trim(),
