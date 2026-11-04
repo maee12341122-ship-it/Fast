@@ -43,7 +43,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إدارة رسائل الشات اللحظية ---
+  // --- إدارة رسائل الشات اللحظية المعزولة ---
   Stream getMessagesForOrder(dynamic orderId, String targetChat) {
     return supabase
         .from('messages')
@@ -223,9 +223,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- مصادقة العميل والتحقق الذكي من قاعدة البيانات (عدم الحاجة لـ OTP إذا كان الرقم مسجلاً مسبقاً) ---
+  // --- مصادقة العميل والتحقق الذكي (التحقق من وجود الرقم مسبقاً في قاعدة البيانات) ---
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
+
+  // توافقية مع `user` في Drawer
+  dynamic get user => userProfile == null ? null : _UserMock(userProfile!['name'] ?? '', userProfile!['phone'] ?? '');
 
   void _loadUserSession() async {
     final prefs = await SharedPreferences.getInstance();
@@ -245,7 +248,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // 👈 فحص الرقم في قاعدة البيانات Supabase عند محاولة تسجيل الدخول
+  // 👈 فحص الرقم في قاعدة البيانات Supabase (إذا كان مسجلاً مسبقاً، يدخل مباشرة بدون OTP)
   Future<bool> checkAndLoginCustomer(String phone) async {
     try {
       String cleanPhone = _normalizePhone(phone);
@@ -256,7 +259,6 @@ class AppState extends ChangeNotifier {
           .maybeSingle();
 
       if (response != null) {
-        // العميل موجود مسبقاً في قاعدة البيانات! يتم تسجيل دخوله مباشرة دون OTP
         String name = response['name']?.toString() ?? '';
         String address = response['address']?.toString() ?? '';
 
@@ -274,11 +276,11 @@ class AppState extends ChangeNotifier {
         prefs.setString('userCity', currentCity);
 
         notifyListeners();
-        return true; // تم الدخول بنجاح بدون OTP
+        return true; // العميل موجود مسبقاً، تم تسجيل الدخول مباشرة دون الحاجة لـ OTP
       }
-      return false; // الرقم غير موجود، يتطلب إرسال OTP
+      return false; // الرقم جديد، يتطلب إرسال OTP
     } catch (e) {
-      debugPrint('❌ خطأ فحص العميل: $e');
+      debugPrint('❌ خطأ في فحص العميل: $e');
       return false;
     }
   }
@@ -305,7 +307,6 @@ class AppState extends ChangeNotifier {
     return false;
   }
 
-  // 👈 حفظ وتحديث بيانات العميل (الاسم والعنوان) في SharedPreferences و Supabase
   Future<void> saveUserProfileDetails(String name, String address) async {
     if (userProfile != null) {
       userProfile!['name'] = name;
@@ -433,7 +434,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- سلة المشتريات والطلبات الخاصة ---
+  // --- سلة المشتريات ---
   final List<CartItemModel> _cartItems = [];
   List<CartItemModel> get cartItems => _cartItems;
 
@@ -493,7 +494,7 @@ class AppState extends ChangeNotifier {
     addCustomItem(name: customName, price: estimatedPrice.toInt(), quantity: 1, notes: '');
   }
 
-  // --- إدارة المنتجات ---
+  // --- المنتجات ---
   List products = [];
 
   Future<void> fetchProductsFromSupabase() async {
@@ -531,7 +532,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- الطلبات وعزلها بدقة تامة والتحديث اللحظي الفوري ---
+  // --- الطلبات والعزل التام والتحديث اللحظي الفوري ---
   List orders = [];
   List notifications = [];
 
@@ -572,7 +573,7 @@ class AppState extends ChangeNotifier {
 
       supabase.from('orders').stream(primaryKey: ['id']).listen((data) {
         orders = List.from(data);
-        notifyListeners();
+        notifyListeners(); // 👈 تحديث فوري ولحظي لكل شاشات التطبيق
       }, onError: (error) {
         debugPrint('⚠️ خطأ في الاستماع للطلبات: $error');
       });
@@ -697,4 +698,10 @@ class AppState extends ChangeNotifier {
       currentCourier!['status'] = 'available';
     }
   }
+}
+
+class _UserMock {
+  final String name;
+  final String phone;
+  _UserMock(this.name, this.phone);
 }
