@@ -76,16 +76,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('إذن الموقع مرفوض بشكل دائم، يرجى تفعليه من الإعدادات')),
+            const SnackBar(content: Text('إذن الموقع مرفوض بشكل دائم، يرجى تفعيله من الإعدادات')),
           );
         }
         setState(() => _isLoadingLocation = false);
         return;
       }
 
-      // جلب الموقع الحالي بدقة عالية
+      // جلب الموقع الحالي بدقة عالية (تم التصحيح هنا ليتوافق مع الإصدار 10.x)
       Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        desiredAccuracy: LocationAccuracy.high,
       );
 
       if (mounted) {
@@ -249,7 +249,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.between,
                 children: [
                   Text('إجمالي المنتجات:', style: TextStyle(color: textColor, fontSize: 15)),
                   Text('${appState.totalAmount} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
