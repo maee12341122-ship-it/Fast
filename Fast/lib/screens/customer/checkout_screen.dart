@@ -50,9 +50,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('الرجاء تفعيل خدمة الموقع (GPS) في جهازك')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('الرجاء تفعيل خدمة الموقع (GPS) في جهازك')),
+          );
+        }
         setState(() => _isLoadingLocation = false);
         return;
       }
@@ -61,36 +63,44 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تم رفض إذن الوصول إلى الموقع')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('تم رفض إذن الوصول إلى الموقع')),
+            );
+          }
           setState(() => _isLoadingLocation = false);
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('إذن الموقع مرفوض بشكل دائم، يرجى تفعيله من الإعدادات')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('إذن الموقع مرفوض بشكل دائم، يرجى تفعليه من الإعدادات')),
+          );
+        }
         setState(() => _isLoadingLocation = false);
         return;
       }
 
       // جلب الموقع الحالي بدقة عالية
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
 
-      setState(() {
-        _selectedLocation = LatLng(position.latitude, position.longitude);
-        _isLoadingLocation = false;
-      });
+      if (mounted) {
+        setState(() {
+          _selectedLocation = LatLng(position.latitude, position.longitude);
+          _isLoadingLocation = false;
+        });
 
-      // تحريك الخريطة بسلاسة إلى موقع العميل الحالي
-      _mapController.move(_selectedLocation, 16.0);
+        // تحريك الخريطة بسلاسة إلى موقع العميل الحالي
+        _mapController.move(_selectedLocation, 16.0);
+      }
     } catch (e) {
-      setState(() => _isLoadingLocation = false);
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+      }
       debugPrint('❌ خطأ في تحديد الموقع: $e');
     }
   }
@@ -239,7 +249,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.between,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('إجمالي المنتجات:', style: TextStyle(color: textColor, fontSize: 15)),
                   Text('${appState.totalAmount} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
@@ -279,15 +289,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   productsTotal: appState.totalAmount,
                 );
 
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const HomeScreen()),
-                  (route) => false,
-                );
+                if (context.mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HomeScreen()),
+                    (route) => false,
+                  );
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('تم إرسال طلبك بنجاح! بانتظار تسعير المشرف ⏳')),
-                );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('تم إرسال طلبك بنجاح! بانتظار تسعير المشرف ⏳')),
+                  );
+                }
               },
               child: const Text('تأكيد وإرسال الطلب للمشرف 🚀', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
             ),
