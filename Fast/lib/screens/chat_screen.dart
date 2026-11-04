@@ -31,7 +31,6 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
 
-    // تحديد عنوان الشات بدقة بناءً على القناة المعزولة
     String chatTitle = widget.targetChat == 'admin_courier'
         ? 'محادثة المشرف مع المندوب (طلب #${widget.orderId})'
         : 'محادثة المشرف مع العميل (طلب #${widget.orderId})';
@@ -48,71 +47,68 @@ class _ChatScreenState extends State<ChatScreen> {
         body: Column(
           children: [
             Expanded(
-              child: StreamBuilder(
-                stream: appState.getMessagesForOrder(widget.orderId, widget.targetChat),
-                builder: (context, snapshot) {
-                  // في حال كان هناك خطأ في الاتصال الحي، نعرض المحتوى بشكل آمن ولا تتعطل الشاشة
-                  final rawMessages = snapshot.hasData ? ((snapshot.data as List?) ?? []) : [];
-                  
-                  // فلترة الرسائل حسب القناة المستهدفة لضمان عدم التداخل نهائياً
-                  final messages = rawMessages.where((msg) {
-                    String chatType = msg['target_chat']?.toString() ?? 'admin_customer';
-                    return chatType == widget.targetChat;
-                  }).toList();
+              child: StreamBuilder<List>>(
+              stream: appState.getMessagesForOrder(widget.orderId, widget.targetChat),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.amber));
+                }
 
-                  if (messages.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: Colors.amber));
-                  }
+                if (snapshot.hasError) {
+                  return Center(child: Text('خطأ في تحميل الرسائل: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
+                }
 
-                  if (messages.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'لا توجد رسائل بعد، ابدأ المحادثة الآن 💬', 
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                final messages = snapshot.data ?? [];
+
+                if (messages.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'لا توجد رسائل بعد، ابدأ المحادثة الآن 💬',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = messages[index];
+                    String senderType = msg['sender_type']?.toString() ?? '';
+                    String messageText = msg['message_text']?.toString() ?? '';
+                    bool isMe = senderType == widget.userRole;
+
+                    String senderLabel = senderType == 'admin'
+                        ? 'الإدارة'
+                        : (senderType == 'courier' ? 'المندوب' : 'العميل');
+
+                    return Align(
+                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.all(10),
+                        constraints: const BoxConstraints(maxWidth: 280),
+                        decoration: BoxDecoration(
+                          color: isMe ? Colors.amber[800] : const Color(0xFF1E1E1E),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.amber.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              senderLabel,
+                              style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(messageText, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                          ],
+                        ),
                       ),
                     );
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index] as Map<String, dynamic>;
-                      String senderType = msg['sender_type']?.toString() ?? '';
-                      String messageText = msg['message_text']?.toString() ?? '';
-                      bool isMe = senderType == widget.userRole;
-
-                      String senderLabel = senderType == 'admin' 
-                          ? 'الإدارة' 
-                          : (senderType == 'courier' ? 'المندوب' : 'العميل');
-
-                      return Align(
-                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.all(10),
-                          constraints: const BoxConstraints(maxWidth: 280),
-                          decoration: BoxDecoration(
-                            color: isMe ? Colors.amber[800] : const Color(0xFF1E1E1E),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.amber.withOpacity(0.2)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                senderLabel,
-                                style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(messageText, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
+                  },
+                );
+              },
               ),
             ),
             Container(

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:geolocator/geolocator.dart';
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
 import '../services/notification_service.dart';
@@ -82,7 +83,7 @@ class AppState extends ChangeNotifier {
     }
 
     final message = Uri.encodeComponent(
-      'مرحباً، رمز التحقق الخاص بك لتطبيق FAST هو: $generatedDynamicOtp'
+        'مرحباً، رمز التحقق الخاص بك لتطبيق FAST هو: $generatedDynamicOtp'
     );
 
     final whatsappUrl = Uri.parse("https://wa.me/$formattedPhone?text=$message");
@@ -104,12 +105,32 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  // 👈 تسلسل طلب الأذونات: الموقع أولاً ثم الإشعارات ثانياً
   Future<void> requestLocationAndNotificationPermissions() async {
     try {
-      debugPrint('📍 تم طلب إذن الموقع والإشعارات بنجاح');
-      addNotification('تطبيق FAST - تعز', 'تم تفعيل الإشعارات وتحديد الموقع بنجاح 🚀');
+      // 1️⃣ أولاً: طلب إذن الموقع (GPS)
+      LocationPermission locationPermission = await Geolocator.checkPermission();
+      if (locationPermission == LocationPermission.denied) {
+        locationPermission = await Geolocator.requestPermission();
+      }
+
+      if (locationPermission == LocationPermission.deniedForever) {
+        debugPrint('⚠️ إذن الموقع مرفوض نهائياً من إعدادات الهاتف');
+      } else {
+        debugPrint('📍 تم التعامل مع إذن الموقع بنجاح');
+      }
+
+      // 2️⃣ ثانياً: بعد الانتهاء من الموقع، طلب إذن الإشعارات مباشرة
+      bool notificationGranted = await NotificationService.requestNotificationPermission();
+      if (notificationGranted) {
+        debugPrint('🔔 تم منح إذن الإشعارات بنجاح');
+        addNotification('تطبيق FAST - تعز', 'تم تفعيل الإشعارات وتحديد الموقع بنجاح 🚀');
+      } else {
+        debugPrint('⚠️ تم رفض إذن الإشعارات');
+      }
+
     } catch (e) {
-      debugPrint('❌ خطأ في طلب الأذونات: $e');
+      debugPrint('❌ خطأ في طلب الأذونات المتسلسلة: $e');
     }
   }
 
@@ -190,8 +211,8 @@ class AppState extends ChangeNotifier {
       if (response != null && response is List) {
         for (var admin in response) {
           String dbUsername = admin['username']?.toString().trim() ?? '';
-          String dbPassword = admin['password_hash']?.toString().trim() ?? 
-                              admin['password']?.toString().trim() ?? '';
+          String dbPassword = admin['password_hash']?.toString().trim() ??
+              admin['password']?.toString().trim() ?? '';
 
           if (dbUsername.toLowerCase() == username.trim().toLowerCase() && dbPassword == password.trim()) {
             isAdminLoggedIn = true;
@@ -274,9 +295,9 @@ class AppState extends ChangeNotifier {
         prefs.setString('userCity', currentCity);
 
         notifyListeners();
-        return true; 
+        return true;
       }
-      return false; 
+      return false;
     } catch (e) {
       debugPrint('❌ خطأ في فحص العميل: $e');
       return false;
@@ -293,7 +314,7 @@ class AppState extends ChangeNotifier {
     if (generatedDynamicOtp != null && enteredOtp == generatedDynamicOtp) {
       String cleanPhone = _normalizePhone(phone);
       userProfile = {'phone': cleanPhone, 'name': '', 'city': currentCity, 'address': ''};
-      
+
       SharedPreferences.getInstance().then((prefs) {
         prefs.setString('userPhone', cleanPhone);
         prefs.setString('userCity', currentCity);
@@ -437,7 +458,7 @@ class AppState extends ChangeNotifier {
   List<CartItemModel> get cartItems => _cartItems;
 
   int get totalCartItemsCount => _cartItems.fold(0, (sum, item) => sum + item.quantity);
-  double get totalAmount => _cartItems.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
+  double get totalAmount => _cartItems.fold(0.0, (sum, item) => sum + (item.price * item.quantity)); // 👈 تم التصحيح هنا
 
   int getProductQuantityInCart(String productId) {
     final index = _cartItems.indexWhere((item) => item.id == productId);
@@ -571,7 +592,7 @@ class AppState extends ChangeNotifier {
 
       supabase.from('orders').stream(primaryKey: ['id']).listen((data) {
         orders = List.from(data);
-        notifyListeners(); 
+        notifyListeners();
       }, onError: (error) {
         debugPrint('⚠️ خطأ في الاستماع للطلبات: $error');
       });
@@ -614,7 +635,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // 👈 قفل التسعير وتحديث الحالة محلياً وفوراً في الذاكرة
   Future<void> setOrderDeliveryFee(dynamic orderId, double fee, String courierName) async {
     try {
       final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
@@ -655,7 +675,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> customerApprovePricing(dynamic orderId) async {
     final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
-    
+
     await supabase.from('orders').update({
       'status': 'waitingCourierApproval',
       'admin_message': 'تم تأكيد الطلب والموافقة على السعر من قِبل العميل ⏳',

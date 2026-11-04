@@ -170,7 +170,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueGrey[800], 
+                          backgroundColor: Colors.blueGrey[800],
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
@@ -194,7 +194,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo[900], 
+                          backgroundColor: Colors.indigo[900],
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
@@ -284,7 +284,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديد الرسوم وإسناد الطلب بنجاح! ✅')));
                   },
                   child: Text(
-                    isLocked ? 'الطلب مؤكد ومقفل 🔒' : 'إرسال التسعيرة وإسناد الطلب للمندوب 🚀', 
+                    isLocked ? 'الطلب مؤكد ومقفل 🔒' : 'إرسال التسعيرة وإسناد الطلب للمندوب 🚀',
                     style: TextStyle(color: isLocked ? Colors.grey : Colors.black, fontWeight: FontWeight.bold),
                   ),
                 ),

@@ -11,6 +11,7 @@ import 'customer/checkout_screen.dart';
 import 'auth/phone_auth_screen.dart';
 import 'courier_screen.dart';
 import 'chat_screen.dart';
+import 'customer/edit_profile_screen.dart'; // 👈 استيراد شاشة تعديل الحساب
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -497,28 +498,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     onPressed: appState.isStoreOpen
                         ? () {
-                            if (_customItemNameController.text.isNotEmpty && _customItemPriceController.text.isNotEmpty) {
-                              final price = double.tryParse(_customItemPriceController.text) ?? 1000.0;
-                              appState.addCustomOrderToCart(
-                                customName: _customItemNameController.text,
-                                estimatedPrice: price,
-                              );
-                              _customItemNameController.clear();
-                              _customItemPriceController.clear();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('تمت إضافة الطلب الخاص إلى السلة بنجاح! 🚀')),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('الرجاء إدخال اسم الطلب والسعر التقديري')),
-                              );
-                            }
-                          }
+                      if (_customItemNameController.text.isNotEmpty && _customItemPriceController.text.isNotEmpty) {
+                        final price = double.tryParse(_customItemPriceController.text) ?? 1000.0;
+                        appState.addCustomOrderToCart(
+                          customName: _customItemNameController.text,
+                          estimatedPrice: price,
+                        );
+                        _customItemNameController.clear();
+                        _customItemPriceController.clear();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('تمت إضافة الطلب الخاص إلى السلة بنجاح! 🚀')),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('الرجاء إدخال اسم الطلب والسعر التقديري')),
+                        );
+                      }
+                    }
                         : () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('عذراً، التطبيق مغلق حالياً. لا يمكن إضافة طلبات 🛑')),
-                            );
-                          },
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('عذراً، التطبيق مغلق حالياً. لا يمكن إضافة طلبات 🛑')),
+                      );
+                    },
                     child: Text(
                       appState.isStoreOpen ? 'إضافة الطلب الخاص للسلة وتجميعه 🛒' : 'التطبيق مغلق حالياً 🛑',
                       style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),
@@ -594,71 +595,71 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 10),
           filteredProducts.isEmpty
               ? const Padding(
-                  padding: EdgeInsets.all(50.0),
-                  child: Center(child: Text('لا توجد نتائج مطابقة للبحث 🔍', style: TextStyle(color: Colors.grey, fontSize: 15))),
-                )
+            padding: EdgeInsets.all(50.0),
+            child: Center(child: Text('لا توجد نتائج مطابقة للبحث 🔍', style: TextStyle(color: Colors.grey, fontSize: 15))),
+          )
               : ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: filteredProducts.length,
-                  itemBuilder: (context, index) {
-                    final ProductModel product = filteredProducts[index];
-                    if (!product.available) return const SizedBox.shrink();
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: filteredProducts.length,
+            itemBuilder: (context, index) {
+              final ProductModel product = filteredProducts[index];
+              if (!product.available) return const SizedBox.shrink();
 
-                    int qtyInCart = appState.getProductQuantityInCart(product.id);
+              int qtyInCart = appState.getProductQuantityInCart(product.id);
 
-                    return Card(
-                      color: cardBg,
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 2,
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        title: Text(product.name, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                        subtitle: Text(
-                          '${product.restaurantName} - ${product.price} ر.ي / (${product.category})',
-                          style: const TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
-                        trailing: qtyInCart == 0
-                            ? ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.amber,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                                ),
-                                onPressed: appState.isStoreOpen
-                                    ? () {
-                                        appState.addToCart(CartItemModel(
-                                          id: product.id,
-                                          name: product.name,
-                                          price: product.price,
-                                          quantity: 1,
-                                          restaurantId: product.restaurantName,
-                                          imageUrl: product.imageUrl,
-                                        ));
-                                      }
-                                    : null,
-                                child: const Text('إضافة للسلة', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold)),
-                              )
-                            : Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 22),
-                                    onPressed: () => appState.updateQuantity(product.id, -1),
-                                  ),
-                                  Text('$qtyInCart', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle_outline, color: Colors.greenAccent, size: 22),
-                                    onPressed: () => appState.updateQuantity(product.id, 1),
-                                  ),
-                                ],
-                              ),
+              return Card(
+                color: cardBg,
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 2,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  title: Text(product.name, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 15)),
+                  subtitle: Text(
+                    '${product.restaurantName} - ${product.price} ر.ي / (${product.category})',
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                  trailing: qtyInCart == 0
+                      ? ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    onPressed: appState.isStoreOpen
+                        ? () {
+                      appState.addToCart(CartItemModel(
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        quantity: 1,
+                        restaurantId: product.restaurantName,
+                        imageUrl: product.imageUrl,
+                      ));
+                    }
+                        : null,
+                    child: const Text('إضافة للسلة', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold)),
+                  )
+                      : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 22),
+                        onPressed: () => appState.updateQuantity(product.id, -1),
                       ),
-                    );
-                  },
+                      Text('$qtyInCart', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 15)),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline, color: Colors.greenAccent, size: 22),
+                        onPressed: () => appState.updateQuantity(product.id, 1),
+                      ),
+                    ],
+                  ),
                 ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -702,7 +703,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber, 
+                  backgroundColor: Colors.amber,
                   minimumSize: const Size(220, 48),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -735,24 +736,24 @@ class _HomeScreenState extends State<HomeScreen> {
             child: appState.cartItems.isEmpty
                 ? const Center(child: Text('السلة فارغة حالياً 🛒', style: TextStyle(color: Colors.grey, fontSize: 15)))
                 : ListView.builder(
-                    itemCount: appState.cartItems.length,
-                    itemBuilder: (context, index) {
-                      final CartItemModel item = appState.cartItems[index];
-                      return Card(
-                        color: cardBg,
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: ListTile(
-                          title: Text(item.name, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-                          subtitle: Text('السعر: ${item.price} ر.ي | الكمية: ${item.quantity} | الإجمالي: ${item.price * item.quantity} ر.ي', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                            onPressed: () => appState.removeFromCart(item.id),
-                          ),
-                        ),
-                      );
-                    },
+              itemCount: appState.cartItems.length,
+              itemBuilder: (context, index) {
+                final CartItemModel item = appState.cartItems[index];
+                return Card(
+                  color: cardBg,
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: ListTile(
+                    title: Text(item.name, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                    subtitle: Text('السعر: ${item.price} ر.ي | الكمية: ${item.quantity} | الإجمالي: ${item.price * item.quantity} ر.ي', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                      onPressed: () => appState.removeFromCart(item.id),
+                    ),
                   ),
+                );
+              },
+            ),
           ),
           if (appState.cartItems.isNotEmpty) ...[
             const Divider(color: Colors.white12, height: 20),
@@ -766,7 +767,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 15),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber, 
+                backgroundColor: Colors.amber,
                 minimumSize: const Size(double.infinity, 48),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -983,72 +984,80 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 20),
         profile == null
             ? Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.amber.withOpacity(0.3)),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.amber.withOpacity(0.3)),
+          ),
+          child: Column(
+            children: [
+              const Icon(Icons.person, size: 60, color: Colors.amber),
+              const SizedBox(height: 10),
+              Text('أنت لست مسجل دخول!', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 5),
+              const Text('سجل دخولك برقم هاتفك للاستمتاع بتجربة التوصيل الأسرع في تعز.', style: TextStyle(color: Colors.grey, fontSize: 13), textAlign: TextAlign.center),
+              const SizedBox(height: 18),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Column(
-                  children: [
-                    const Icon(Icons.person, size: 60, color: Colors.amber),
-                    const SizedBox(height: 10),
-                    Text('أنت لست مسجل دخول!', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 5),
-                    const Text('سجل دخولك برقم هاتفك للاستمتاع بتجربة التوصيل الأسرع في تعز.', style: TextStyle(color: Colors.grey, fontSize: 13), textAlign: TextAlign.center),
-                    const SizedBox(height: 18),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber,
-                        minimumSize: const Size(double.infinity, 48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const PhoneAuthScreen()),
-                        );
-                      },
-                      child: const Text('تسجيل الدخول برقم الهاتف 📱', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
-                    ),
-                  ],
-                ),
-              )
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const PhoneAuthScreen()),
+                  );
+                },
+                child: const Text('تسجيل الدخول برقم الهاتف 📱', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
+              ),
+            ],
+          ),
+        )
             : Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.amber.withOpacity(0.3)),
-                ),
-                child: Row(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.amber.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              const CircleAvatar(
+                backgroundColor: Colors.amber,
+                radius: 24,
+                child: Icon(Icons.person, color: Colors.black, size: 28),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const CircleAvatar(
-                      backgroundColor: Colors.amber,
-                      radius: 24,
-                      child: Icon(Icons.person, color: Colors.black, size: 28),
-                    ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(profile['name'] ?? 'عميل FAST', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
-                          const SizedBox(height: 4),
-                          Text('📞 ${profile['phone']} | 📍 تعز', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                          if (profile['address'] != null && profile['address'].toString().isNotEmpty)
-                            Text('🏠 العنوان: ${profile['address']}', style: const TextStyle(color: Colors.amber, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => appState.logoutUser(),
-                      child: const Text('خروج', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                    ),
+                    Text(profile['name'] ?? 'عميل FAST', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 4),
+                    Text('📞 ${profile['phone']} | 📍 تعز', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    if (profile['address'] != null && profile['address'].toString().isNotEmpty)
+                      Text('🏠 العنوان: ${profile['address']}', style: const TextStyle(color: Colors.amber, fontSize: 12)),
                   ],
                 ),
               ),
+              TextButton(
+                onPressed: () => appState.logoutUser(),
+                child: const Text('خروج', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 20),
+
+        // 👈 زر الانتقال لشاشة تعديل البيانات الشخصية
+        _buildProfileItem(Icons.edit, 'تعديل البيانات الشخصية', cardBg, textColor, () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+          );
+        }),
 
         _buildProfileItem(Icons.dark_mode, 'مظهر التطبيق (${appState.isDarkMode ? "الوضع الداكن" : "الوضع الفاتح"})', cardBg, textColor, () {
           appState.toggleTheme();
@@ -1056,39 +1065,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _buildProfileItem(Icons.location_city, 'المدينة (تعز - اليمن - حصرياً)', cardBg, textColor, () {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('تطبيق FAST مخصص لخدمة مدينة تعز بكل سرعة 🌟')),
-          );
-        }),
-        _buildProfileItem(Icons.bookmark_added, 'عناويني ومواقع التوصيل المحفوظة', cardBg, textColor, () {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: cardBg,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text('العناوين المحفوظة', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-              content: Text(
-                profile != null && profile['address'] != null && profile['address'].toString().isNotEmpty
-                    ? 'العنوان النشط حالياً:\n${profile['address']}'
-                    : 'لم تقم بحفظ عناوين إضافية بعد.',
-                style: const TextStyle(color: Colors.grey),
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسناً', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)))
-              ],
-            ),
-          );
-        }),
-        _buildProfileItem(Icons.local_offer, 'العروض والخصومات الخاصة', cardBg, textColor, () {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: cardBg,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text('العروض الترويجية', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-              content: const Text('ترقبوا أقوى خصومات التوصيل ومجانيات المطاعم قريباً في تعز مع FAST! 🎁', style: TextStyle(color: Colors.grey)),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)))
-              ],
-            ),
           );
         }),
         _buildProfileItem(Icons.share, 'مشاركة التطبيق مع الأصدقاء', cardBg, textColor, () {
@@ -1107,28 +1083,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               actions: [
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('فهمت', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)))
-              ],
-            ),
-          );
-        }),
-        _buildProfileItem(Icons.phone, 'اتصل بخدمة العملاء والدعم', cardBg, textColor, () {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: cardBg,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text('خدمة العملاء', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.phone, color: Colors.green),
-                    title: Text('رقم الدعم الفني: ${appState.customerSupportPhone}', style: TextStyle(color: textColor)),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)))
               ],
             ),
           );
