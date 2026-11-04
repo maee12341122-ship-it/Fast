@@ -19,15 +19,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
 
-    // إعداد تأثير ظهور تدريجي ناعم (Fade-in Animation) لإعطاء طابع احترافي فاخر
     _controller = AnimationController(
-      vsDuration: const Duration(milliseconds: 1200),
       duration: const Duration(milliseconds: 1200),
+      vsync: this,
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
     _controller.forward();
 
-    // الانتظار لمدة ثانية ونصف ثم الانتقال بسلاسة للشاشة الرئيسية
     Future.delayed(const Duration(milliseconds: 1800), () {
       if (mounted) {
         Navigator.pushReplacement(
@@ -65,7 +63,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // الشعار الفخم بـ حجم كبير وبارز مع تأثير توهج خفيف
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
