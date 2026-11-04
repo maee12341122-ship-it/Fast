@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import '../widgets/empty_state.dart';
@@ -19,15 +20,17 @@ class OrdersScreen extends StatelessWidget {
       body: orders.isEmpty
           ? const EmptyState(message: 'لا توجد طلبات محفوظة حتى الآن', icon: Icons.receipt_long_outlined)
           : ListView.builder(
-        padding: const EdgeInsets.all(10),
-        itemCount: orders.length,
-        itemBuilder: (context, index) => _orderCard(context, orders[index]),
-      ),
+              padding: const EdgeInsets.all(10),
+              itemCount: orders.length,
+              itemBuilder: (context, index) => _orderCard(context, orders[index]),
+            ),
     );
   }
 
   Widget _orderCard(BuildContext context, dynamic order) {
-    // التعامل مع الطلب سواء كان Map (من Supabase مباشرة) أو كائن Model
+    final appState = context.read<AppState>();
+    
+    // التعامل مع الطلب سواء كان Map أو كائن Model
     final orderId = order is Map ? (order['id']?.toString() ?? '') : order.id;
     final status = order is Map ? (order['status']?.toString() ?? 'waitingForPricing') : order.status;
     final totalPrice = order is Map ? (order['total_price']?.toString() ?? '0') : order.total.toString();
@@ -39,6 +42,13 @@ class OrdersScreen extends StatelessWidget {
     final deliveryFee = order is Map ? (order['delivery_fee']?.toString() ?? '0') : order.deliveryFee.toString();
     final assignedCourier = order is Map ? (order['assigned_courier']?.toString() ?? 'لم يتم التعيين') : order.assignedCourier;
     final adminMessage = order is Map ? (order['admin_message']?.toString() ?? '') : '';
+
+    // إظهار الإشعار المنبثق للعميل تلقائياً إذا أرسل المشرف السعر
+    if (status == 'pricingSentToCustomer') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showCustomerPricingDialog(context, appState, orderId, deliveryFee, totalPrice);
+      });
+    }
 
     return Card(
       color: Theme.of(context).colorScheme.surface,
@@ -61,7 +71,6 @@ class OrdersScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // --- إدراج الخط الزمني هنا ليتتبع العميل حالة طلبه بصرياً ---
                   const Text('مراحل الطلب:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppConstants.gold)),
                   const SizedBox(height: 8),
                   buildOrderStatusTimeline(status),
@@ -90,6 +99,52 @@ class OrdersScreen extends StatelessWidget {
             actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
           ),
         ),
+      ),
+    );
+  }
+
+  // --- نافذة الإشعار المنبثق لتسعيرة المشرف على شاشة العميل ---
+  void _showCustomerPricingDialog(BuildContext context, AppState appState, String orderId, dynamic deliveryFee, dynamic totalPrice) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: Row(
+          children: const [
+            Icon(Icons.notification_important, color: AppConstants.gold),
+            SizedBox(width: 8),
+            Text('تسعيرة جديدة من المشرف', style: TextStyle(color: Colors.white, fontSize: 16)),
+          ],
+        ),
+        content: Text(
+          'قام المشرف بتحديد رسوم التوصيل ($deliveryFee ر.ي).\nالإجمالي الكلي: $totalPrice ر.ي.\nهل توافق على المتابعة وتأكيد الطلب؟',
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            onPressed: () {
+              appState.customerCancelOrder(orderId);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('تم رفض التسعيرة وإلغاء الطلب 🔴')),
+              );
+            },
+            child: const Text('رفض وإلغاء'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppConstants.gold, foregroundColor: Colors.black),
+            onPressed: () {
+              appState.customerApprovePricing(orderId);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('تمت الموافقة بنجاح، جاري إسناد الطلب للمندوب! 🚀')),
+              );
+            },
+            child: const Text('موافقة وقبول', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
