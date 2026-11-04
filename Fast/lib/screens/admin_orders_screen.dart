@@ -4,19 +4,26 @@ import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import '../widgets/empty_state.dart';
 
-class AdminOrdersScreen extends StatelessWidget {
+class AdminOrdersScreen extends StatefulWidget {
   final VoidCallback? onOpenDrawer;
   const AdminOrdersScreen({super.key, this.onOpenDrawer});
 
   @override
+  State<AdminOrdersScreen> createState() => _AdminOrdersScreenState();
+}
+
+class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
+  // خريطة لتخزين حالة القفل لكل طلب على حدة (مفتاحها رقم الطلب)
+  final Map<String, bool> _feeLockedState = {};
+
+  @override
   Widget build(BuildContext context) {
-    // جلب الطلبات لحظياً من قاعدة البيانات عبر الـ AppState
     final orders = context.watch<AppState>().orders;
     final appState = context.read<AppState>();
 
     return Scaffold(
       appBar: AppBar(
-        leading: onOpenDrawer == null ? null : IconButton(icon: const Icon(Icons.menu), onPressed: onOpenDrawer),
+        leading: widget.onOpenDrawer == null ? null : IconButton(icon: const Icon(Icons.menu), onPressed: widget.onOpenDrawer),
         title: const Text('لوحة تحكم المشرف - الطلبات'),
       ),
       body: orders.isEmpty
@@ -30,7 +37,6 @@ class AdminOrdersScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final order = orders[index];
                 
-                // استخراج بيانات الطلب بدقة من قاعدة البيانات
                 final orderId = order['id']?.toString() ?? '';
                 final customerName = order['customer_name']?.toString() ?? 'عميل';
                 final phone = order['phone']?.toString() ?? '';
@@ -42,6 +48,12 @@ class AdminOrdersScreen extends StatelessWidget {
                 final status = order['status']?.toString() ?? 'waitingForPricing';
                 final assignedCourier = order['assigned_courier']?.toString() ?? 'لم يتم التعيين';
                 final adminMessage = order['admin_message']?.toString() ?? '';
+
+                // هل تم إرسال التسعيرة من قبل؟ (إذا كانت الحالة غير waitingForPricing يعتبر مقفلاً مبدئياً)
+                bool isLocked = _feeLockedState.putIfAbsent(
+                  orderId, 
+                  () => status != 'waitingForPricing'
+                );
 
                 return Card(
                   color: Theme.of(context).colorScheme.surface,
@@ -79,9 +91,29 @@ class AdminOrdersScreen extends StatelessWidget {
                         Text('🛒 تفاصيل المنتجات: $itemsDesc', style: const TextStyle(color: Colors.white70)),
                         const Divider(height: 20),
 
-                        // --- الحسابات المالية ---
+                        // --- الحسابات المالية مع خيار التعديل المقفل ---
                         Text('سعر المنتجات: $productsTotal ر.ي'),
-                        Text('رسوم التوصيل: $deliveryFee ر.ي'),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text('رسوم التوصيل: $deliveryFee ر.ي', style: TextStyle(color: isLocked ? Colors.white70 : AppConstants.gold)),
+                            ),
+                            // زر جانبى لتعديل رسوم التوصيل بعد إرسالها
+                            IconButton(
+                              icon: Icon(
+                                isLocked ? Icons.edit : Icons.lock, 
+                                color: isLocked ? AppConstants.gold : Colors.green,
+                                size: 20,
+                              ),
+                              tooltip: isLocked ? 'تعديل رسوم التوصيل' : 'قفل الرسوم',
+                              onPressed: () {
+                                setState(() {
+                                  _feeLockedState[orderId] = !isLocked;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
                         Text('الإجمالي الكلي: $totalPrice ر.ي', style: const TextStyle(fontWeight: FontWeight.bold, color: AppConstants.gold)),
                         const SizedBox(height: 6),
                         Text('🛵 المندوب المعين: $assignedCourier', style: const TextStyle(color: Colors.amber)),
@@ -93,8 +125,8 @@ class AdminOrdersScreen extends StatelessWidget {
                         
                         const SizedBox(height: 12),
 
-                        // --- زر تحديد رسوم التوصيل وإسناد المندوب (يظهر إذا كان الطلب بانتظار التسعير) ---
-                        if (status == 'waitingForPricing')
+                        // --- زر تحديد رسوم التوصيل وإسناد المندوب ---
+                        if (status == 'waitingForPricing' || !isLocked)
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
@@ -104,7 +136,10 @@ class AdminOrdersScreen extends StatelessWidget {
                               ),
                               onPressed: () => _showPricingDialog(context, appState, orderId),
                               icon: const Icon(Icons.local_shipping),
-                              label: const Text('تحديد رسوم التوصيل وإسناد المندوب 🚀', style: TextStyle(fontWeight: FontWeight.bold)),
+                              label: Text(
+                                status == 'waitingForPricing' ? 'تحديد رسوم التوصيل وإسناد المندوب 🚀' : 'تحديث وإعادة إرسال التسعيرة 🔄', 
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ),
                       ],
@@ -175,8 +210,12 @@ class AdminOrdersScreen extends StatelessWidget {
                 return;
               }
 
-              // إرسال الرسوم واسم المندوب لقاعدة البيانات وتنبيه العميل
+              // إرسال الرسوم واسم المندوب لقاعدة البيانات وتنبيه العميل وقفل التعديل
               appState.setOrderDeliveryFee(orderId, fee, selectedCourier!);
+              setState(() {
+                _feeLockedState[orderId.toString()] = true;
+              });
+              
               Navigator.pop(context);
 
               ScaffoldMessenger.of(context).showSnackBar(
