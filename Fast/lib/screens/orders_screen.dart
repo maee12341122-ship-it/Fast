@@ -14,21 +14,29 @@ class OrdersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 👈 استخدام watch لجعل شاشة طلبات العميل تتحدث تلقائياً وفوراً لحظة وصول التحديث
     final orders = context.watch<AppState>().customerOrders;
     
-    return Scaffold(
-      appBar: AppBar(
-        leading: onOpenDrawer == null ? null : IconButton(icon: const Icon(Icons.menu), onPressed: onOpenDrawer),
-        title: const Text('طلباتي'),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF121212),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF1E1E1E),
+          elevation: 2,
+          leading: onOpenDrawer == null ? null : IconButton(icon: const Icon(Icons.menu, color: AppConstants.gold), onPressed: onOpenDrawer),
+          title: const Text('طلباتي', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16)),
+        ),
+        body: orders.isEmpty
+            ? const EmptyState(
+                message: 'لا توجد طلبات محفوظة خاصة بك حتى الآن 📦', 
+                icon: Icons.receipt_long_outlined,
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: orders.length,
+                itemBuilder: (context, index) => _orderCard(context, orders[index]),
+              ),
       ),
-      body: orders.isEmpty
-          ? const EmptyState(message: 'لا توجد طلبات محفوظة خاصة بك حتى الآن', icon: Icons.receipt_long_outlined)
-          : ListView.builder(
-              padding: const EdgeInsets.all(10),
-              itemCount: orders.length,
-              itemBuilder: (context, index) => _orderCard(context, orders[index]),
-            ),
     );
   }
 
@@ -47,7 +55,6 @@ class OrdersScreen extends StatelessWidget {
     final assignedCourier = order is Map ? (order['assigned_courier']?.toString() ?? 'لم يتم التعيين') : order.assignedCourier;
     final adminMessage = order is Map ? (order['admin_message']?.toString() ?? '') : '';
 
-    // إظهار نافذة التسعير للعميل تلقائياً وفوراً بمجرد أن يرسلها المشرف (مرة واحدة لكل طلب)
     if (status == 'pricingSentToCustomer' && !_processedPricingOrders.contains(orderId)) {
       _processedPricingOrders.add(orderId);
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -56,105 +63,159 @@ class OrdersScreen extends StatelessWidget {
     }
 
     return Card(
-      color: Theme.of(context).colorScheme.surface,
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      child: ListTile(
-        leading: const CircleAvatar(
-          backgroundColor: AppConstants.gold,
-          child: Icon(Icons.receipt, color: Colors.black),
-        ),
-        title: Text('طلب #$orderId', style: const TextStyle(fontWeight: FontWeight.bold, color: AppConstants.gold)),
-        subtitle: Text('الحالة: $status\nالإجمالي: $totalPrice ر.ي\nالمندوب: $assignedCourier'),
-        isThreeLine: true,
-        trailing: const Icon(Icons.chevron_left),
-        onTap: () => showDialog<void>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: Text('تفاصيل الطلب #$orderId'),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('مراحل الطلب:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppConstants.gold)),
-                  const SizedBox(height: 8),
-                  buildOrderStatusTimeline(status),
-                  const Divider(height: 20),
+      color: const Color(0xFF1E1E1E),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppConstants.gold.withOpacity(0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('طلب #$orderId', style: const TextStyle(fontWeight: FontWeight.bold, color: AppConstants.gold, fontSize: 16)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(_getStatusText(status), style: const TextStyle(color: AppConstants.gold, fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const Divider(color: Colors.white12, height: 20),
+            Text('💰 الإجمالي: $totalPrice ر.ي', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 4),
+            Text('🛵 المندوب: $assignedCourier', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppConstants.gold,
+                  side: BorderSide(color: AppConstants.gold.withOpacity(0.5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (dialogContext) => Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: AlertDialog(
+                      backgroundColor: const Color(0xFF1E1E1E),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      title: Text('تفاصيل الطلب #$orderId', style: const TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16)),
+                      content: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('مراحل الطلب:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.gold)),
+                            const SizedBox(height: 10),
+                            buildOrderStatusTimeline(status),
+                            const Divider(color: Colors.white12, height: 24),
 
-                  Text('الحالة الحالية: $status'),
-                  if (adminMessage.isNotEmpty) ...[
-                    const SizedBox(height: 5),
-                    Text('ملاحظة الإدارة: $adminMessage', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
-                  ],
-                  const Divider(),
-                  Text('العميل: $customerName'),
-                  Text('الهاتف: $customerPhone'),
-                  Text('العنوان: $address'),
-                  const Divider(),
-                  Text('تفاصيل الطلب: $itemsDesc', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const Divider(),
-                  Text('سعر المنتجات: $productsTotal ر.ي'),
-                  Text('رسوم التوصيل: $deliveryFee ر.ي'),
-                  Text('الإجمالي الكلي: $totalPrice ر.ي', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 5),
-                  Text('المندوب المعين: $assignedCourier'),
-                ],
+                            Text('الحالة الحالية: ${_getStatusText(status)}', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                            if (adminMessage.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                child: Text('ملاحظة الإدارة: $adminMessage', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
+                            ],
+                            const Divider(color: Colors.white12),
+                            Text('👤 العميل: $customerName', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                            Text('📞 الهاتف: $customerPhone', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                            Text('📍 العنوان: $address', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                            const Divider(color: Colors.white12),
+                            Text('🛒 تفاصيل المنتجات:\n$itemsDesc', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                            const Divider(color: Colors.white12),
+                            Text('سعر المنتجات: $productsTotal ر.ي', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                            Text('رسوم التوصيل: $deliveryFee ر.ي', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                            Text('الإجمالي الكلي: $totalPrice ر.ي', style: const TextStyle(fontWeight: FontWeight.bold, color: AppConstants.gold, fontSize: 14)),
+                            const SizedBox(height: 6),
+                            Text('المندوب المعين: $assignedCourier', style: const TextStyle(color: Colors.amberAccent, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext), 
+                          child: const Text('إغلاق', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.info_outline, size: 16),
+                label: const Text('عرض التفاصيل الكاملة', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
-            actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  // --- نافذة الإشعار المنبثق لتسعيرة المشرف على شاشة العميل ---
   void _showCustomerPricingDialog(BuildContext context, AppState appState, String orderId, dynamic deliveryFee, dynamic totalPrice) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: Row(
-          children: const [
-            Icon(Icons.notification_important, color: AppConstants.gold),
-            SizedBox(width: 8),
-            Text('تسعيرة جديدة من المشرف', style: TextStyle(color: Colors.white, fontSize: 16)),
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.notification_important, color: AppConstants.gold),
+              SizedBox(width: 8),
+              Text('تسعيرة جديدة من المشرف', style: TextStyle(color: AppConstants.gold, fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Text(
+            'قام المشرف بتحديد رسوم التوصيل ($deliveryFee ر.ي).\nالإجمالي الكلي: $totalPrice ر.ي.\nهل توافق على المتابعة وتأكيد الطلب؟',
+            style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+              onPressed: () {
+                appState.customerCancelOrder(orderId);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('تم رفض التسعيرة وإلغاء الطلب 🔴')),
+                );
+              },
+              child: const Text('رفض وإلغاء', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.gold, 
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                appState.customerApprovePricing(orderId);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('تمت الموافقة بنجاح، جاري إسناد الطلب للمندوب! 🚀')),
+                );
+              },
+              child: const Text('موافقة وقبول', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
           ],
         ),
-        content: Text(
-          'قام المشرف بتحديد رسوم التوصيل ($deliveryFee ر.ي).\nالإجمالي الكلي: $totalPrice ر.ي.\nهل توافق على المتابعة وتأكيد الطلب؟',
-          style: const TextStyle(color: Colors.white70, fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            onPressed: () {
-              appState.customerCancelOrder(orderId);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('تم رفض التسعيرة وإلغاء الطلب 🔴')),
-              );
-            },
-            child: const Text('رفض وإلغاء'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppConstants.gold, foregroundColor: Colors.black),
-            onPressed: () {
-              appState.customerApprovePricing(orderId);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('تمت الموافقة بنجاح، جاري إسناد الطلب للمندوب! 🚀')),
-              );
-            },
-            child: const Text('موافقة وقبول', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }
 
-  // --- دالة رسم الخط الزمني لحالة الطلب ---
   Widget buildOrderStatusTimeline(String status) {
     int getStepIndex() {
       switch (status) {
@@ -178,15 +239,28 @@ class OrdersScreen extends StatelessWidget {
         return Column(
           children: [
             CircleAvatar(
-              radius: 10,
-              backgroundColor: isDone ? AppConstants.gold : Colors.grey[700],
+              radius: 11,
+              backgroundColor: isDone ? AppConstants.gold : Colors.grey[800],
               child: isDone ? const Icon(Icons.check, size: 12, color: Colors.black) : null,
             ),
-            const SizedBox(height: 4),
-            Text(steps[index], style: TextStyle(fontSize: 9, color: isDone ? AppConstants.gold : Colors.grey)),
+            const SizedBox(height: 6),
+            Text(steps[index], style: TextStyle(fontSize: 10, color: isDone ? AppConstants.gold : Colors.grey, fontWeight: FontWeight.bold)),
           ],
         );
       }),
     );
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'waitingForPricing': return 'بانتظار التسعير';
+      case 'pricingSentToCustomer': return 'تم إرسال السعر';
+      case 'waitingCourierApproval': return 'بانتظار المندوب';
+      case 'onTheWay': return 'المندوب في الطريق';
+      case 'arrived': return 'وصل المندوب';
+      case 'delivered': return 'تم التسليم';
+      case 'cancelledByCustomer': return 'ملغي من العميل';
+      default: return status;
+    }
   }
 }
