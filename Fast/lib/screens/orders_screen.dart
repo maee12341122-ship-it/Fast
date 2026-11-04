@@ -5,13 +5,16 @@ import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import '../widgets/empty_state.dart';
 
+// متغير بسيط لتتبع الطلبات التي تم عرض نافذة التسعير لها لمنع تكرارها
+final Set<String> _processedPricingOrders = {};
+
 class OrdersScreen extends StatelessWidget {
   final VoidCallback? onOpenDrawer;
   const OrdersScreen({super.key, this.onOpenDrawer});
 
   @override
   Widget build(BuildContext context) {
-    // 👈 استخدام customerOrders لعزل طلبيات العميل الحالي برقم هاتفه فقط
+    // 👈 استخدام watch لجعل الشاشة تحدث نفسها تلقائياً وفوراً لحظة وصول التحديث من السيرفر
     final orders = context.watch<AppState>().customerOrders;
     
     return Scaffold(
@@ -32,7 +35,6 @@ class OrdersScreen extends StatelessWidget {
   Widget _orderCard(BuildContext context, dynamic order) {
     final appState = context.read<AppState>();
     
-    // التعامل مع الطلب سواء كان Map أو كائن Model
     final orderId = order is Map ? (order['id']?.toString() ?? '') : order.id;
     final status = order is Map ? (order['status']?.toString() ?? 'waitingForPricing') : order.status;
     final totalPrice = order is Map ? (order['total_price']?.toString() ?? '0') : order.total.toString();
@@ -45,8 +47,9 @@ class OrdersScreen extends StatelessWidget {
     final assignedCourier = order is Map ? (order['assigned_courier']?.toString() ?? 'لم يتم التعيين') : order.assignedCourier;
     final adminMessage = order is Map ? (order['admin_message']?.toString() ?? '') : '';
 
-    // إظهار الإشعار المنبثق للعميل تلقائياً إذا أرسل المشرف السعر
-    if (status == 'pricingSentToCustomer') {
+    // إظهار نافذة التسعير للعميل تلقائياً وفوراً بمجرد أن يرسلها المشرف (مرة واحدة فقط لكل طلب)
+    if (status == 'pricingSentToCustomer' && !_processedPricingOrders.contains(orderId)) {
+      _processedPricingOrders.add(orderId);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showCustomerPricingDialog(context, appState, orderId, deliveryFee, totalPrice);
       });
