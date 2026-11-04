@@ -83,7 +83,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         return;
       }
 
-      // جلب الموقع الحالي بدقة عالية (تم التصحيح هنا ليتوافق مع الإصدار 10.x)
+      // جلب الموقع الحالي بدقة عالية
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -249,7 +249,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.between,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween, // تم تصحيحها هنا
                 children: [
                   Text('إجمالي المنتجات:', style: TextStyle(color: textColor, fontSize: 15)),
                   Text('${appState.totalAmount} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
