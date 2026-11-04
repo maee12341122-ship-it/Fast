@@ -1,42 +1,54 @@
 import 'package:flutter/material.dart';
 
 class FastAppLogo extends StatelessWidget {
-  const FastAppLogo({Key? key}) : super(key: key);
+  final double iconSize;
+  final double textSize;
+  final EdgeInsetsGeometry padding;
+
+  const FastAppLogo({
+    Key? key, 
+    this.iconSize = 30.0, 
+    this.textSize = 16.0,
+    this.padding = const EdgeInsets.all(8.0),
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: padding,
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.amber, width: 2),
+        border: Border.all(color: Colors.amber, width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.amber.withOpacity(0.3),
-            blurRadius: 15,
-            spreadRadius: 2,
+            blurRadius: 10,
+            spreadRadius: 1,
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: const [
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
           Icon(
             Icons.flash_on,
-            size: 50,
+            size: iconSize,
             color: Colors.amber,
           ),
-          SizedBox(height: 5),
-          Text(
-            'FAST',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 3,
+          if (textSize > 0) ...[
+            const SizedBox(width: 4),
+            Text(
+              'FAST',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: textSize,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
