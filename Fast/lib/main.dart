@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'services/notification_service.dart'; // استيراد خدمة الإشعارات الفورية
 import 'providers/app_state.dart';
 import 'screens/splash_screen.dart'; // استيراد شاشة البداية الاحترافية
 
@@ -15,6 +16,13 @@ void main() async {
     );
   } catch (e) {
     debugPrint('⚠️ خطأ في اتصال Supabase: $e');
+  }
+
+  // تهيئة وتفعيل نظام الإشعارات الفورية وطلب أذونات العميل
+  try {
+    await NotificationService.initialize();
+  } catch (e) {
+    debugPrint('⚠️ خطأ في تهيئة الإشعارات: $e');
   }
 
   runApp(
