@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
-    <!-- أضفنا هذا القسم لكي يسمح النظام لأندرويد بفتح روابط الواتساب والإنترنت الخارجية بسلاسة -->
+    <!-- للسماح بنظام أندرويد 11+ بفتح روابط الواتساب والروابط الخارجية -->
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW" />
@@ -18,8 +18,9 @@
 
     <application
         android:name="${applicationName}"
-        android:label="تعز إكسبرس"
-        android:icon="@android:drawable/sym_def_app_icon"
+        android:label="Fast"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
