@@ -32,11 +32,15 @@ class _CourierScreenState extends State<CourierScreen> {
         backgroundColor: const Color(0xFF121212),
         appBar: AppBar(
           backgroundColor: const Color(0xFF1E1E1E),
-          title: Text(courier == null ? 'تسجيل دخول المندوب' : 'لوحة المندوب: ${courier['name']}', style: const TextStyle(color: Colors.white)),
+          elevation: 2,
+          title: Text(
+            courier == null ? 'تسجيل دخول الكابتن' : 'لوحة المندوب: ${courier['name']}', 
+            style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           actions: [
             if (courier != null)
               IconButton(
-                icon: const Icon(Icons.logout, color: Colors.red),
+                icon: const Icon(Icons.logout, color: Colors.redAccent),
                 tooltip: 'تسجيل الخروج',
                 onPressed: () => appState.logoutCourier(),
               ),
@@ -44,57 +48,75 @@ class _CourierScreenState extends State<CourierScreen> {
         ),
         body: courier == null
             ? Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Center(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.two_wheeler, size: 70, color: Colors.amber),
-                  const SizedBox(height: 20),
-                  const Text('بوابة تسجيل دخول الكابتن (المندوب)', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 20),
-                  TextField(
-                    controller: _usernameController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'اسم المستخدم',
-                      labelStyle: TextStyle(color: Colors.grey),
-                      filled: true,
-                      fillColor: Color(0xFF1E1E1E),
+                padding: const EdgeInsets.all(20.0),
+                child: Center(
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                          ),
+                          child: const Icon(Icons.two_wheeler, size: 60, color: Colors.amber),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text('بوابة تسجيل دخول الكابتن', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        const Text('أدخل بيانات الاعتماد الخاصة بك للوصول للطلبات', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                        const SizedBox(height: 30),
+                        TextField(
+                          controller: _usernameController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'اسم المستخدم',
+                            labelStyle: TextStyle(color: Colors.grey),
+                            filled: true,
+                            fillColor: Color(0xFF1E1E1E),
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.person_outline, color: Colors.amber),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: 'كلمة السر',
+                            labelStyle: TextStyle(color: Colors.grey),
+                            filled: true,
+                            fillColor: Color(0xFF1E1E1E),
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.lock_outline, color: Colors.amber),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber, 
+                            minimumSize: const Size(double.infinity, 48),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () {
+                            bool success = appState.loginCourier(_usernameController.text.trim(), _passwordController.text.trim());
+                            if (!success) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('فشل الدخول: إما بيانات غير صحيحة أو أن الحساب مفتوح في جلسة أخرى حالياً!')),
+                              );
+                            }
+                          },
+                          child: const Text('دخول لوحة الطلبات 🚀', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'كلمة السر',
-                      labelStyle: TextStyle(color: Colors.grey),
-                      filled: true,
-                      fillColor: Color(0xFF1E1E1E),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, minimumSize: const Size(double.infinity, 45)),
-                    onPressed: () {
-                      bool success = appState.loginCourier(_usernameController.text.trim(), _passwordController.text.trim());
-                      if (!success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('فشل الدخول: إما بيانات غير صحيحة أو أن الحساب مفتوح في جلسة أخرى حالياً!')),
-                        );
-                      }
-                    },
-                    child: const Text('دخول لوحة الطلبات', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        )
+                ),
+              )
             : _buildCourierOrdersList(appState, courier),
       ),
     );
@@ -103,7 +125,6 @@ class _CourierScreenState extends State<CourierScreen> {
   Widget _buildCourierOrdersList(AppState appState, Map<String, dynamic> courier) {
     final String todayDate = DateTime.now().toString().split(' ')[0];
 
-    // فلترة الطلبات المسندة للمندوب بناءً على الحقل الصحيح في Supabase
     final myOrders = appState.orders.where((o) {
       return o['assigned_courier'] == courier['name'];
     }).toList();
@@ -114,125 +135,193 @@ class _CourierScreenState extends State<CourierScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E1E), 
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.amber.withOpacity(0.3)),
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('الكابتن: ${courier['name']}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
-                Text('طلبات اليوم ($todayDate): ${myOrders.length}', style: const TextStyle(color: Colors.white70)),
+                Row(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: Colors.amber,
+                      radius: 18,
+                      child: Icon(Icons.delivery_dining, color: Colors.black, size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    Text('الكابتن: ${courier['name']}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text('طلبات اليوم: ${myOrders.length}', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
               ],
             ),
           ),
           const SizedBox(height: 15),
           Expanded(
             child: myOrders.isEmpty
-                ? const Center(child: Text('لا توجد طلبات مسندة لك حالياً', style: TextStyle(color: Colors.grey)))
+                ? const Center(child: Text('لا توجد طلبات مسندة لك حالياً 📦', style: TextStyle(color: Colors.grey, fontSize: 15)))
                 : ListView.builder(
-              itemCount: myOrders.length,
-              itemBuilder: (context, index) {
-                final order = myOrders[index];
-                final orderId = order['id'].toString();
+                    itemCount: myOrders.length,
+                    itemBuilder: (context, index) {
+                      final order = myOrders[index];
+                      final orderId = order['id'].toString();
 
-                return Card(
-                  color: const Color(0xFF1E1E1E),
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('طلب #$orderId', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
-                            IconButton(
-                              icon: const Icon(Icons.chat, color: Colors.amber),
-                              tooltip: 'مراسلة المشرف',
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ChatScreen(
-                                      orderId: orderId,
-                                      userRole: 'courier',
-                                      targetChat: 'admin_courier',
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
+                      return Card(
+                        color: const Color(0xFF1E1E1E),
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: Colors.amber.withOpacity(0.2)),
                         ),
-                        const SizedBox(height: 4),
-                        Text('العنوان المطلوب: ${order['address'] ?? ''}', style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                        const SizedBox(height: 4),
-                        Text('المنتجات: ${order['items_description'] ?? ''}', style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                        const SizedBox(height: 4),
-                        Text('الإجمالي المطلوب: ${order['total_price'] ?? 0} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        Text('الحالة: ${order['status'] ?? ''}', style: const TextStyle(color: Colors.cyanAccent, fontSize: 13)),
-                        const Divider(color: Colors.grey),
-
-                        // التسلسل الصحيح لأزرار المندوب:
-                        if (order['status'] == 'waitingCourierApproval') ...[
-                          const Text('هل تقبل توصيل هذا الطلب؟', style: TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          Row(
+                        child: Padding(
+                          padding: const EdgeInsets.all(14.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                                  onPressed: () {
-                                    appState.courierRespondToOrder(orderId, true);
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('قَبِلت الطلب بنجاح 🟢')));
-                                  },
-                                  child: const Text('قبول الطلب', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('طلب #$orderId', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
+                                  IconButton(
+                                    style: IconButton.styleFrom(backgroundColor: Colors.blueGrey[800]),
+                                    icon: const Icon(Icons.chat, color: Colors.amber, size: 20),
+                                    tooltip: 'مراسلة المشرف',
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => ChatScreen(
+                                            orderId: orderId,
+                                            userRole: 'courier',
+                                            targetChat: 'admin_courier',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                  onPressed: () {
-                                    appState.courierRespondToOrder(orderId, false);
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم رفض الطلب وإعادته للإدارة 🔴')));
-                                  },
-                                  child: const Text('رفض الطلب', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                ),
+                              const Divider(color: Colors.white12, height: 16),
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_on, size: 16, color: Colors.redAccent),
+                                  const SizedBox(width: 6),
+                                  Expanded(child: Text('العنوان: ${order['address'] ?? ''}', style: const TextStyle(color: Colors.white70, fontSize: 13))),
+                                ],
                               ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(Icons.shopping_bag, size: 16, color: Colors.amberAccent),
+                                  const SizedBox(width: 6),
+                                  Expanded(child: Text('المنتجات: ${order['items_description'] ?? ''}', style: const TextStyle(color: Colors.white70, fontSize: 13))),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text('💰 الإجمالي المطلوب: ${order['total_price'] ?? 0} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14)),
+                              const SizedBox(height: 4),
+                              Text('📌 الحالة: ${order['status'] ?? ''}', style: const TextStyle(color: Colors.cyanAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                              const Divider(color: Colors.white12, height: 20),
+
+                              // التسلسل الصحيح لأزرار المندوب بتصميم بارز وواضح:
+                              if (order['status'] == 'waitingCourierApproval') ...[
+                                const Text('هل تقبل توصيل هذا الطلب؟', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green, 
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        ),
+                                        icon: const Icon(Icons.check, size: 18),
+                                        onPressed: () {
+                                          appState.courierRespondToOrder(orderId, true);
+                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('قَبِلت الطلب بنجاح 🟢')));
+                                        },
+                                        label: const Text('قبول الطلب', style: TextStyle(fontWeight: FontWeight.bold)),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red, 
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        ),
+                                        icon: const Icon(Icons.close, size: 18),
+                                        onPressed: () {
+                                          appState.courierRespondToOrder(orderId, false);
+                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم رفض الطلب وإعادته للإدارة 🔴')));
+                                        },
+                                        label: const Text('رفض الطلب', style: TextStyle(fontWeight: FontWeight.bold)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ]
+                              else if (order['status'] == 'onTheWay') ...[
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blueAccent, 
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size(double.infinity, 44),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  icon: const Icon(Icons.navigation),
+                                  onPressed: () {
+                                    appState.courierUpdateArrival(orderId);
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال إشعار الوصول للعميل والمشرف! 📍')));
+                                  },
+                                  label: const Text('هل وصلت إلى العميل؟ (نعم، وصلت)', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                              ]
+                              else if (order['status'] == 'arrived') ...[
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green, 
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size(double.infinity, 44),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  icon: const Icon(Icons.task_alt),
+                                  onPressed: () {
+                                    appState.markOrderDelivered(orderId);
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تأكيد تسليم الطلب بنجاح! ✅')));
+                                  },
+                                  label: const Text('تم التسليم ✅', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                              ]
+                              else ...[
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text('ملاحظة: ${order['admin_message'] ?? ''}', style: const TextStyle(color: Colors.greenAccent, fontSize: 12)),
+                                ),
+                              ],
                             ],
                           ),
-                        ]
-                        else if (order['status'] == 'onTheWay') ...[
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, minimumSize: const Size(double.infinity, 40)),
-                            onPressed: () {
-                              appState.courierUpdateArrival(orderId);
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال إشعار الوصول للعميل والمشرف! 📍')));
-                            },
-                            child: const Text('هل وصلت إلى العميل؟ (نعم، وصلت)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          ),
-                        ]
-                        else if (order['status'] == 'arrived') ...[
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, minimumSize: const Size(double.infinity, 40)),
-                              onPressed: () {
-                                appState.markOrderDelivered(orderId);
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تأكيد تسليم الطلب بنجاح! ✅')));
-                              },
-                              child: const Text('تم التسليم ✅', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            ),
-                          ]
-                          else ...[
-                              Text('ملاحظة: ${order['admin_message'] ?? ''}', style: const TextStyle(color: Colors.greenAccent, fontSize: 12)),
-                            ],
-                      ],
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
