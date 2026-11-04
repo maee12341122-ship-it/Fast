@@ -4,6 +4,18 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+    <!-- أضفنا هذا القسم لكي يسمح النظام لأندرويد بفتح روابط الواتساب والإنترنت الخارجية بسلاسة -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+    </queries>
+
     <application
         android:name="${applicationName}"
         android:label="تعز إكسبرس"
