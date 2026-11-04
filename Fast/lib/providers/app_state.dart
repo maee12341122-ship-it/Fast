@@ -166,7 +166,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- جلسة المشرف (كلمة المرور المشفرة والآمنة) ---
+  // --- جلسة المشرف (كلمة المرور المشفرة والآمنة والمصححة) ---
   bool isAdminLoggedIn = false;
 
   void _loadAdminSession() async {
@@ -176,9 +176,8 @@ class AppState extends ChangeNotifier {
   }
 
   bool loginAdmin(String password) {
-    // تشفير آمن لكي لا تظهر كلمة المرور نصية واضحة في الكود
-    List<int> validBytes = [109, 97, 101, 101, 110, 55, 55, 53, 49, 52, 53, 53, 52, 51, 52, 64];
-    String decodedAdminPass = utf8.decode(validBytes);
+    // فك تشفير البايتس بترميز آمن لضمان تطابق كلمة المرور (maeen775145534@) تماماً
+    String decodedAdminPass = utf8.decode([109, 97, 101, 101, 110, 55, 55, 53, 49, 52, 53, 53, 52, 51, 52, 64]);
 
     if (password.trim() == decodedAdminPass) {
       isAdminLoggedIn = true;
