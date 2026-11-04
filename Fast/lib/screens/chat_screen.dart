@@ -31,6 +31,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
 
+    // تحديد عنوان الشات بدقة بناءً على القناة المعزولة
     String chatTitle = widget.targetChat == 'admin_courier'
         ? 'محادثة المشرف مع المندوب (طلب #${widget.orderId})'
         : 'محادثة المشرف مع العميل (طلب #${widget.orderId})';
@@ -57,7 +58,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     return Center(child: Text('خطأ في تحميل الرسائل: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
                   }
 
-                  final messages = (snapshot.data as List?) ?? [];
+                  // جلب الرسائل وفلترتها حسب القناة المستهدفة لضمان عدم التداخل نهائياً
+                  final rawMessages = (snapshot.data as List?) ?? [];
+                  final messages = rawMessages.where((msg) {
+                    String chatType = msg['target_chat']?.toString() ?? 'admin_customer';
+                    return chatType == widget.targetChat;
+                  }).toList();
 
                   if (messages.isEmpty) {
                     return const Center(child: Text('لا توجد رسائل بعد، ابدأ المحادثة الآن 💬', style: TextStyle(color: Colors.grey)));
@@ -72,7 +78,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       String messageText = msg['message_text']?.toString() ?? '';
                       bool isMe = senderType == widget.userRole;
 
-                      String senderLabel = senderType == 'admin' ? 'الإدارة' : (senderType == 'courier' ? 'المندوب' : 'العميل');
+                      String senderLabel = senderType == 'admin' 
+                          ? 'الإدارة' 
+                          : (senderType == 'courier' ? 'المندوب' : 'العميل');
 
                       return Align(
                         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
