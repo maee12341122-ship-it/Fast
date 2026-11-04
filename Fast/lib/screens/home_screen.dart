@@ -79,6 +79,83 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // نافذة تقييم المندوب والخدمة من قبل العميل
+  void _showRatingDialog(BuildContext context, AppState appState, String orderId, Color cardBg, Color textColor) {
+    int rating = 5;
+    final commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            backgroundColor: cardBg,
+            title: Row(
+              children: const [
+                Icon(Icons.star, color: Colors.amber),
+                SizedBox(width: 10),
+                Text('تقييم المندوب والطلب', style: TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('كيف وجدت سرعة الخدمة وتعامُل المندوب معك؟', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                const SizedBox(height: 15),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    return IconButton(
+                      icon: Icon(
+                        index < rating ? Icons.star : Icons.star_border,
+                        color: Colors.amber,
+                        size: 30,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          rating = index + 1;
+                        });
+                      },
+                    );
+                  }),
+                ),
+                const SizedBox(height: 15),
+                TextField(
+                  controller: commentController,
+                  style: TextStyle(color: textColor),
+                  decoration: InputDecoration(
+                    labelText: 'ملاحظاتك أو شكر للمندوب (اختياري)',
+                    labelStyle: const TextStyle(color: Colors.grey),
+                    filled: true,
+                    fillColor: Colors.grey[900],
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('شكراً لك! تم إرسال تقييمك للمندوب بنجاح ⭐')),
+                  );
+                },
+                child: const Text('إرسال التقييم', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _checkAndShowPricingDialog(BuildContext context, AppState appState, Color cardBg, Color textColor) {
     if (appState.userProfile == null || appState.isAdminLoggedIn) return;
 
@@ -255,7 +332,6 @@ class _HomeScreenState extends State<HomeScreen> {
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex,
             onTap: (index) {
-              // اشتراط تسجيل الدخول والـ OTP فقط عند الانتقال إلى السلة (Index 1)
               if (index == 1 && appState.userProfile == null) {
                 Navigator.push(
                   context,
@@ -359,7 +435,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // تم ربط زر الطلب الخاص بشرط المتجر المفتوح أو المغلق هنا 🛑
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: appState.isStoreOpen ? Colors.amber : Colors.grey,
@@ -667,7 +742,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- شاشة طلباتي مع مؤشر خطوات الطلب المرئي وزر مشاركة الفاتورة ---
+  // --- شاشة طلباتي مع مؤشر الخطوات، زر مشاركة الفاتورة، وزر تقييم المندوب ---
   Widget _buildOrdersTab(AppState appState, Color cardBg, Color textColor) {
     if (appState.orders.isEmpty) {
       return const Center(
@@ -771,6 +846,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text('${order['total_price']} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14)),
                   ],
                 ),
+                // زر تقييم المندوب يظهر عندما يصل الطلب أو يتم تسليمه
+                if (status == 'delivered' || status == 'arrived') ...[
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber.withOpacity(0.2),
+                      foregroundColor: Colors.amber,
+                      minimumSize: const Size(double.infinity, 38),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: const BorderSide(color: Colors.amber),
+                      ),
+                    ),
+                    onPressed: () {
+                      _showRatingDialog(context, appState, order['id'].toString(), cardBg, textColor);
+                    },
+                    icon: const Icon(Icons.star, size: 18),
+                    label: const Text('قيم المندوب وخدمة التوصيل ⭐', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ],
             ),
           ),
