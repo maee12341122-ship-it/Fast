@@ -1,5 +1,5 @@
-name: taiz_express
-description: Taiz Express Flutter app with backend and admin web foundation.
+name: fast
+description: Fast Delivery App - أسرع تطبيق توصيل في تعز.
 publish_to: 'none'
 version: 2.2.0+2
 
@@ -20,11 +20,21 @@ dependencies:
   url_launcher: ^6.2.5
   share_plus: ^7.2.1
 
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+# إعدادات الشعار والأيقونة الخارجية للتطبيق
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/app_icon.png"
 
 flutter:
   uses-material-design: true
+
+  # تفعيل مجلد الصور لاستخدام الشعار في الواجهات والأيقونات
+  assets:
+    - assets/images/app_icon.png
