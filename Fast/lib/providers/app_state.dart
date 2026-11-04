@@ -43,7 +43,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إدارة رسائل الشات ---
+  // --- إدارة رسائل الشات اللحظية ---
   Stream getMessagesForOrder(dynamic orderId, String targetChat) {
     return supabase
         .from('messages')
@@ -70,7 +70,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- إرسال رمز التحقق عبر الواتساب المباشر ---
+  // --- إرسال رمز التحقق عبر الواتساب ---
   Future<void> sendOtpViaWhatsAppDirect(String phone) async {
     if (generatedDynamicOtp == null) return;
 
@@ -301,7 +301,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إدارة المناديب وحالتهم (متاح / مشغول) ---
+  // --- إدارة المناديب وحالتهم ---
   Map<String, dynamic>? currentCourier;
   List couriers = [];
 
@@ -491,16 +491,31 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- الطلبات والتحديث اللحظي ---
+  // --- الطلبات وعزلها بدقة تامة والتحديث اللحظي الفوري ---
   List orders = [];
   List notifications = [];
 
+  // 👈 دالة تنظيف ومقارنة أرقام الهواتف لمنع أي تداخل بين العملاء
+  String _normalizePhone(String phone) {
+    String clean = phone.trim().replaceAll(' ', '');
+    if (clean.startsWith('0')) {
+      clean = clean.substring(1);
+    }
+    if (clean.startsWith('967')) {
+      clean = clean.substring(3);
+    }
+    return clean;
+  }
+
   List get customerOrders {
-    if (userProfile == null || userProfile!['phone'] == null) return [];
-    String myPhone = userProfile!['phone']!.trim();
+    if (userProfile == null || userProfile!['phone'] == null || userProfile!['phone']!.isEmpty) {
+      return [];
+    }
+    String myPhone = _normalizePhone(userProfile!['phone']!);
+
     return orders.where((o) {
-      String orderPhone = o['phone']?.toString().trim() ?? '';
-      return orderPhone == myPhone;
+      String orderPhone = _normalizePhone(o['phone']?.toString() ?? '');
+      return orderPhone.isNotEmpty && orderPhone == myPhone;
     }).toList();
   }
 
@@ -513,12 +528,12 @@ class AppState extends ChangeNotifier {
   void listenToOrdersRealtime() async {
     try {
       final initialData = await supabase.from('orders').select();
-      orders = initialData;
+      orders = List.from(initialData);
       notifyListeners();
 
       supabase.from('orders').stream(primaryKey: ['id']).listen((data) {
-        orders = data;
-        notifyListeners();
+        orders = List.from(data);
+        notifyListeners(); // 👈 تحديث فوري ولحظي لكل شاشات التطبيق (المشرف، العميل، المندوب) بدون إغلاق
       }, onError: (error) {
         debugPrint('⚠️ خطأ في الاستماع للطلبات: $error');
       });
