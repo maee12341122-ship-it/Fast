@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import '../utils/constants.dart';
 
 class MapLocationScreen extends StatefulWidget {
   const MapLocationScreen({Key? key}) : super(key: key);
@@ -11,10 +11,12 @@ class MapLocationScreen extends StatefulWidget {
 }
 
 class _MapLocationScreenState extends State<MapLocationScreen> {
-  // إحداثيات مدينة تعز الافتراضية (منطقة جولت سينان / شارع جمال)
-  LatLng _currentCenter = const LatLng(13.5779, 44.0219);
-  final MapController _mapController = MapController();
-  String _selectedLocationName = 'تعز - شارع جمال الرئيسي';
+  GoogleMapController? _controller;
+  
+  // إحداثيات تعز الافتراضية (منطقة ديلوكس / شارع جمال)
+  static const LatLng _taizDefault = LatLng(13.5779, 44.0219);
+  LatLng _selectedLatLng = _taizDefault;
+  String _selectedAddressName = 'تعز - ديلوكس / بجوار الشارع العام';
   bool _isLoadingGps = false;
 
   @override
@@ -23,42 +25,41 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
     _determinePosition();
   }
 
-  // دالة جلب الموقع الحالي للجهاز عبر الـ GPS
+  // جلب الموقع الحالي عبر الـ GPS
   Future<void> _determinePosition() async {
     setState(() => _isLoadingGps = true);
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      setState(() => _isLoadingGps = false);
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
         setState(() => _isLoadingGps = false);
         return;
       }
-    }
 
-    if (permission == LocationPermission.deniedForever) {
-      setState(() => _isLoadingGps = false);
-      return;
-    }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() => _isLoadingGps = false);
+          return;
+        }
+      }
 
-    try {
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
+
+      LatLng currentLatLng = LatLng(position.latitude, position.longitude);
       setState(() {
-        _currentCenter = LatLng(position.latitude, position.longitude);
-        _selectedLocationName = 'موقعي الحالي (تعز - ديلوكس / الروضة)';
+        _selectedLatLng = currentLatLng;
+        _selectedAddressName = 'موقعي الحالي (تعز)';
         _isLoadingGps = false;
       });
-      _mapController.move(_currentCenter, 16.0);
+
+      _controller?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: currentLatLng, zoom: 16.5),
+        ),
+      );
     } catch (e) {
       setState(() => _isLoadingGps = false);
     }
@@ -66,9 +67,8 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const cardColor = Color(0xFF1E1E1E);       // أسود رمادي فاخر
-    const backgroundColor = Color(0xFF121212); // أسود داكن
-    const primaryGold = Colors.amber;          // ذهبي
+    const cardColor = Color(0xFF1E1E1E);
+    const backgroundColor = Color(0xFF121212);
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -76,59 +76,56 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
         backgroundColor: backgroundColor,
         appBar: AppBar(
           backgroundColor: cardColor,
-          title: const Text('حدد موقعك بدقة على الخريطة', style: TextStyle(color: primaryGold, fontSize: 16, fontWeight: FontWeight.bold)),
+          title: const Text('حدد موقع منزلك على خريطة جوجل', style: TextStyle(color: AppConstants.gold, fontSize: 15, fontWeight: FontWeight.bold)),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_forward, color: primaryGold),
-            onPressed: () => Navigator.pop(context, _selectedLocationName),
+            icon: const Icon(Icons.arrow_forward, color: AppConstants.gold),
+            onPressed: () => Navigator.pop(context, _selectedAddressName),
           ),
         ),
         body: Stack(
           children: [
-            // خريطة OpenStreetMap مع دعم تفاصيل أحياء تعز
-            FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-                initialCenter: _currentCenter,
-                initialZoom: 15.0,
-                onPositionChanged: (position, hasGesture) {
-                  if (hasGesture && position.center != null) {
-                    setState(() {
-                      _currentCenter = position.center!;
-                      _selectedLocationName = 'تعز (خط عرض: ${_currentCenter.latitude.toStringAsFixed(4)}, خط طول: ${_currentCenter.longitude.toStringAsFixed(4)})';
-                    });
-                  }
-                },
+            // خريطة جوجل الحقيقية
+            GoogleMap(
+              initialCameraPosition: const CameraPosition(
+                target: _taizDefault,
+                zoom: 15.0,
               ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.taiz.express',
-                ),
-              ],
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              onMapCreated: (GoogleMapController controller) {
+                _controller = controller;
+              },
+              onCameraMove: (CameraPosition position) {
+                setState(() {
+                  _selectedLatLng = position.target;
+                  _selectedAddressName = 'تعز (خط عرض: ${_selectedLatLng.latitude.toStringAsFixed(4)}, خط طول: ${_selectedLatLng.longitude.toStringAsFixed(4)})';
+                });
+              },
             ),
 
-            // دبوس التحديد في منتصف الشاشة
+            // دبوس التحديد الثابت في منتصف الخريطة (لتحديد المنزل)
             const Center(
               child: Padding(
                 padding: EdgeInsets.only(bottom: 40),
-                child: Icon(Icons.location_pin, size: 50, color: Colors.amberAccent),
+                child: Icon(Icons.location_pin, size: 55, color: Colors.redAccent),
               ),
             ),
 
-            // زر تحديد الموقع الحالي (GPS) بالثيم الأسود والذهبي
+            // زر تحديد الموقع الحالي (GPS)
             Positioned(
               top: 20,
               left: 20,
               child: FloatingActionButton(
                 backgroundColor: cardColor,
                 child: _isLoadingGps 
-                    ? const CircularProgressIndicator(color: primaryGold) 
-                    : const Icon(Icons.my_location, color: primaryGold),
+                    ? const CircularProgressIndicator(color: AppConstants.gold) 
+                    : const Icon(Icons.my_location, color: AppConstants.gold),
                 onPressed: _determinePosition,
               ),
             ),
 
-            // شريط العنوان السفلي مع زر التأكيد بالثيم الأسود والذهبي الفاخر
+            // شريط العنوان السفلي مع زر التثبيت
             Positioned(
               bottom: 20,
               left: 20,
@@ -138,7 +135,7 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                 decoration: BoxDecoration(
                   color: cardColor,
                   borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: primaryGold.withOpacity(0.3)),
+                  border: Border.all(color: AppConstants.gold.withOpacity(0.4)),
                   boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10)],
                 ),
                 child: Column(
@@ -146,11 +143,11 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.home, color: primaryGold),
+                        const Icon(Icons.home, color: AppConstants.gold),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            _selectedLocationName,
+                            _selectedAddressName,
                             style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -160,12 +157,13 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                     const SizedBox(height: 12),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryGold,
+                        backgroundColor: AppConstants.gold,
                         minimumSize: const Size(double.infinity, 45),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () {
-                        Navigator.pop(context, _selectedLocationName);
+                        // إرجاع العنوان والموقع المختار عند النقر
+                        Navigator.pop(context, _selectedAddressName);
                       },
                       child: const Text('تثبيت هذا الموقع وعودة', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                     ),
