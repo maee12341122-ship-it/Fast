@@ -35,7 +35,7 @@ class FastApp extends StatelessWidget {
     final appState = Provider.of<AppState>(context);
 
     return MaterialApp(
-      title: 'FAST – تعز',
+      title: 'Fast', // تم تعديل اسم التطبيق ليصبح Fast رسمياً
       debugShowCheckedModeBanner: false,
       themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
