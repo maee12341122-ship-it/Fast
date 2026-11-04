@@ -12,7 +12,7 @@ void main() async {
   try {
     await Supabase.initialize(
       url: 'https://pzokmpthkpuofrntufyp.supabase.co',
-      anonKey: 'Sb_publishable_uI01Ippgs8yXi9k18JO8DQ_Zm74RqQf',
+      anonKey: ' sb_publishable_uI01Ippgs8yXi9k18JO8DQ_Zm74RqQf',
     );
   } catch (e) {
     debugPrint('⚠️ خطأ في اتصال Supabase: $e');
