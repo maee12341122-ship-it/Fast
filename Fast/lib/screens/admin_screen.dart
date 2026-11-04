@@ -56,7 +56,6 @@ class _AdminScreenState extends State<AdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 👈 استخدام watch لجعل لوحة المشرف تتحدث تلقائياً ولحظياً فور حدوث أي تغيير في قاعدة البيانات
     final appState = context.watch<AppState>();
 
     final List<Widget> adminPages = [
@@ -72,7 +71,8 @@ class _AdminScreenState extends State<AdminScreen> {
         backgroundColor: const Color(0xFF121212),
         appBar: AppBar(
           backgroundColor: const Color(0xFF1E1E1E),
-          title: const Text('لوحة تحكم المشرف - FAST', style: TextStyle(color: Colors.amber, fontSize: 16)),
+          elevation: 2,
+          title: const Text('لوحة تحكم المشرف - FAST', style: TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
           actions: [
             IconButton(
               icon: const Icon(Icons.logout, color: Colors.redAccent),
@@ -105,7 +105,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Widget _buildOrdersManagement(AppState appState) {
     if (appState.orders.isEmpty) {
-      return const Center(child: Text('لا توجد طلبات جديدة حالياً', style: TextStyle(color: Colors.grey)));
+      return const Center(child: Text('لا توجد طلبات جديدة حالياً', style: TextStyle(color: Colors.grey, fontSize: 15)));
     }
 
     return ListView.builder(
@@ -125,9 +125,13 @@ class _AdminScreenState extends State<AdminScreen> {
         return Card(
           color: const Color(0xFF1E1E1E),
           margin: const EdgeInsets.symmetric(vertical: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.amber.withOpacity(0.2), width: 1),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(14.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -135,24 +139,40 @@ class _AdminScreenState extends State<AdminScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('طلب #$orderId', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text(arabicStatus, style: const TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.greenAccent.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.greenAccent.withOpacity(0.3)),
+                      ),
+                      child: Text(arabicStatus, style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
                   ],
                 ),
-                const Divider(color: Colors.grey),
-                Text('👤 العميل: ${order['customer_name']} (${order['phone']})', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                const Divider(color: Colors.white12, height: 20),
+                Text('👤 العميل: ${order['customer_name']} (${order['phone']})', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
                 Text('📍 العنوان: ${order['address']}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 4),
                 Text('🛒 المنتجات: ${order['items_description']}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 4),
                 Text('💰 سعر المنتجات: ${order['products_total']} ر.ي', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 4),
                 Text('🛵 المندوب الحالي: $assignedCourier', style: const TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
                 // --- أزرار الشات المعزولة للمشرف ---
                 Row(
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey, foregroundColor: Colors.white),
-                        icon: const Icon(Icons.chat, size: 16),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueGrey[800], 
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.chat, size: 16, color: Colors.amber),
                         label: const Text('شات العميل', style: TextStyle(fontSize: 12)),
                         onPressed: () {
                           Navigator.push(
@@ -171,8 +191,12 @@ class _AdminScreenState extends State<AdminScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
-                        icon: const Icon(Icons.delivery_dining, size: 16),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.indigo[900], 
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.delivery_dining, size: 16, color: Colors.amber),
                         label: const Text('شات المندوب', style: TextStyle(fontSize: 12)),
                         onPressed: () {
                           Navigator.push(
@@ -190,7 +214,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
                 Row(
                   children: [
@@ -238,11 +262,12 @@ class _AdminScreenState extends State<AdminScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.amber,
-                    minimumSize: const Size(double.infinity, 40),
+                    minimumSize: const Size(double.infinity, 44),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
                     final fee = double.tryParse(_feeControllers[orderId]?.text ?? '0') ?? 0.0;
@@ -274,35 +299,35 @@ class _AdminScreenState extends State<AdminScreen> {
           TextField(
             controller: _productNameController,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(labelText: 'اسم المنتج', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E)),
+            decoration: const InputDecoration(labelText: 'اسم المنتج', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder()),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           TextField(
             controller: _restaurantNameController,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(labelText: 'اسم المتجر أو المطعم', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E)),
+            decoration: const InputDecoration(labelText: 'اسم المتجر أو المطعم', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder()),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           TextField(
             controller: _priceController,
             keyboardType: TextInputType.number,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(labelText: 'السعر (ر.ي)', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E)),
+            decoration: const InputDecoration(labelText: 'السعر (ر.ي)', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder()),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             dropdownColor: const Color(0xFF1E1E1E),
             style: const TextStyle(color: Colors.white),
             value: _selectedCategory,
-            decoration: const InputDecoration(labelText: 'القسم', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E)),
+            decoration: const InputDecoration(labelText: 'القسم', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder()),
             items: ['المطاعم', 'البقالات', 'الخضار والفواكه', 'الصيدلية الآمنة', 'هدايا واكسسوارات'].map((cat) {
               return DropdownMenuItem(value: cat, child: Text(cat, style: const TextStyle(color: Colors.white)));
             }).toList(),
             onChanged: (val) => setState(() => _selectedCategory = val!),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, minimumSize: const Size(double.infinity, 45), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             onPressed: () {
               if (_productNameController.text.isNotEmpty && _priceController.text.isNotEmpty) {
                 final newProduct = ProductModel(
@@ -334,7 +359,7 @@ class _AdminScreenState extends State<AdminScreen> {
       child: ListView(
         children: [
           const Text('حسابات المناديب ومستحقات المشرف (20%)', style: TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           if (appState.couriers.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 20),
@@ -358,7 +383,7 @@ class _AdminScreenState extends State<AdminScreen> {
               return Card(
                 color: const Color(0xFF1E1E1E),
                 margin: const EdgeInsets.symmetric(vertical: 6),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.amber.withOpacity(0.3))),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Colors.amber.withOpacity(0.3))),
                 child: Padding(
                   padding: const EdgeInsets.all(14.0),
                   child: Column(
@@ -375,7 +400,7 @@ class _AdminScreenState extends State<AdminScreen> {
                           ),
                         ],
                       ),
-                      const Divider(color: Colors.grey),
+                      const Divider(color: Colors.white12),
                       Text('📞 الهاتف: ${courier['phone'] ?? 'غير محدد'}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
                       Text('📦 الطلبات المكتملة: $completedOrdersCount', style: const TextStyle(color: Colors.white70, fontSize: 13)),
                       Text('💰 إجمالي دخل التوصيل: ${totalDeliveryFees.toStringAsFixed(0)} ر.ي', style: const TextStyle(color: Colors.white70, fontSize: 13)),
@@ -391,16 +416,16 @@ class _AdminScreenState extends State<AdminScreen> {
           const SizedBox(height: 10),
           const Text('إضافة مندوب توصيل جديد', style: TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 15),
-          TextField(controller: _courierNameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'اسم المندوب الكامل', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E))),
-          const SizedBox(height: 10),
-          TextField(controller: _courierPhoneController, keyboardType: TextInputType.phone, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'رقم الهاتف', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E))),
-          const SizedBox(height: 10),
-          TextField(controller: _courierUsernameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'اسم المستخدم للدخول', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E))),
-          const SizedBox(height: 10),
-          TextField(controller: _courierPasswordController, obscureText: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'كلمة المرور', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E))),
-          const SizedBox(height: 15),
+          TextField(controller: _courierNameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'اسم المندوب الكامل', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder())),
+          const SizedBox(height: 12),
+          TextField(controller: _courierPhoneController, keyboardType: TextInputType.phone, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'رقم الهاتف', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder())),
+          const SizedBox(height: 12),
+          TextField(controller: _courierUsernameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'اسم المستخدم للدخول', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder())),
+          const SizedBox(height: 12),
+          TextField(controller: _courierPasswordController, obscureText: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'كلمة المرور', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder())),
+          const SizedBox(height: 20),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, minimumSize: const Size(double.infinity, 45), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             onPressed: () {
               if (_courierNameController.text.isNotEmpty && _courierUsernameController.text.isNotEmpty) {
                 appState.addCourier(_courierNameController.text, _courierPhoneController.text, _courierUsernameController.text, _courierPasswordController.text);
@@ -429,12 +454,12 @@ class _AdminScreenState extends State<AdminScreen> {
         children: [
           const Text('إعدادات أوقات الدوام الرسمي للمتجر', style: TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 15),
-          TextField(controller: startController, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'ساعة الفتح', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E))),
+          TextField(controller: startController, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'ساعة الفتح', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder())),
           const SizedBox(height: 12),
-          TextField(controller: endController, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'ساعة الإغلاق', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E))),
+          TextField(controller: endController, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'ساعة الإغلاق', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder())),
           const SizedBox(height: 20),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, minimumSize: const Size(double.infinity, 45)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, minimumSize: const Size(double.infinity, 45), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             onPressed: () {
               final start = int.tryParse(startController.text) ?? 8;
               final end = int.tryParse(endController.text) ?? 24;
