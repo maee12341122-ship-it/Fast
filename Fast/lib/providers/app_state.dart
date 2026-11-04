@@ -43,7 +43,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إدارة رسائل الشات المباشر مع Supabase ---
+  // --- إدارة رسائل الشات المباشر مع Supabase (تم تصحيح القوالب) ---
   Stream<List>> getMessagesForOrder(dynamic orderId, String targetChat) {
     return supabase
         .from('messages')
