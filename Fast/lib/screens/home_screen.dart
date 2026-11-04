@@ -358,30 +358,40 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  // تم ربط زر الطلب الخاص بشرط المتجر المفتوح أو المغلق هنا 🛑
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
+                      backgroundColor: appState.isStoreOpen ? Colors.amber : Colors.grey,
                       minimumSize: const Size(double.infinity, 45),
                     ),
-                    onPressed: () {
-                      if (_customItemNameController.text.isNotEmpty && _customItemPriceController.text.isNotEmpty) {
-                        final price = double.tryParse(_customItemPriceController.text) ?? 1000.0;
-                        appState.addCustomOrderToCart(
-                          customName: _customItemNameController.text,
-                          estimatedPrice: price,
-                        );
-                        _customItemNameController.clear();
-                        _customItemPriceController.clear();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('تمت إضافة الطلب الخاص إلى السلة بنجاح!')),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('الرجاء إدخال اسم الطلب والسعر التقديري')),
-                        );
-                      }
-                    },
-                    child: const Text('إضافة الطلب الخاص للسلة وتجميعه', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                    onPressed: appState.isStoreOpen
+                        ? () {
+                            if (_customItemNameController.text.isNotEmpty && _customItemPriceController.text.isNotEmpty) {
+                              final price = double.tryParse(_customItemPriceController.text) ?? 1000.0;
+                              appState.addCustomOrderToCart(
+                                customName: _customItemNameController.text,
+                                estimatedPrice: price,
+                              );
+                              _customItemNameController.clear();
+                              _customItemPriceController.clear();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('تمت إضافة الطلب الخاص إلى السلة بنجاح!')),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('الرجاء إدخال اسم الطلب والسعر التقديري')),
+                              );
+                            }
+                          }
+                        : () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('عذراً، التطبيق مغلق حالياً. لا يمكن إضافة طلبات 🛑')),
+                            );
+                          },
+                    child: Text(
+                      appState.isStoreOpen ? 'إضافة الطلب الخاص للسلة وتجميعه' : 'التطبيق مغلق حالياً 🛑',
+                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),
