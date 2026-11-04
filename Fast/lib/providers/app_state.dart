@@ -223,7 +223,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- مصادقة العميل والتحقق الذكي (التحقق من وجود الرقم مسبقاً في قاعدة البيانات) ---
+  // --- مصادقة العميل والتحقق الذكي ---
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
 
@@ -247,7 +247,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // 👈 فحص الرقم في قاعدة البيانات Supabase (إذا كان مسجلاً مسبقاً، يرجع البيانات تلقائياً)[span_1](start_span)[span_1](end_span)
   Future<bool> checkAndLoginCustomer(String phone) async {
     try {
       String cleanPhone = _normalizePhone(phone);
@@ -615,16 +614,19 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // 👈 قفل التسعير ومنع تعديلها إذا تم إرسالها مسبقاً
+  // 👈 قفل التسعير وتحديث الحالة محلياً وفوراً في الذاكرة
   Future<void> setOrderDeliveryFee(dynamic orderId, double fee, String courierName) async {
     try {
-      final order = orders.firstWhere((o) => o['id'].toString() == orderId.toString(), orElse: () => null);
-      if (order != null && order['status'] != 'waitingForPricing' && order['status'] != 'pricingSentToCustomer') {
-        debugPrint('⚠️ الطلب مؤكد أو منتهي، لا يمكن تعديل تسعيره!');
-        return;
+      final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
+      if (orderIndex != -1) {
+        final currentStatus = orders[orderIndex]['status']?.toString();
+        if (currentStatus != null && currentStatus != 'waitingForPricing' && currentStatus != 'pricingSentToCustomer') {
+          debugPrint('⚠️ الطلب مؤكد أو منتهي، لا يمكن تعديل تسعيره!');
+          return;
+        }
       }
 
-      double productsTotal = order != null ? double.tryParse(order['products_total'].toString()) ?? 0.0 : 0.0;
+      double productsTotal = orderIndex != -1 ? double.tryParse(orders[orderIndex]['products_total'].toString()) ?? 0.0 : 0.0;
       double totalPrice = productsTotal + fee;
 
       await supabase.from('orders').update({
@@ -636,6 +638,14 @@ class AppState extends ChangeNotifier {
         'admin_message': 'تم تحديد رسوم التوصيل ($fee ر.ي). بانتظار موافقة العميل ⏳',
       }).eq('id', orderId);
 
+      if (orderIndex != -1) {
+        orders[orderIndex]['delivery_fee'] = fee;
+        orders[orderIndex]['total_price'] = totalPrice;
+        orders[orderIndex]['assigned_courier'] = courierName.trim();
+        orders[orderIndex]['status'] = 'pricingSentToCustomer';
+        orders[orderIndex]['admin_message'] = 'تم تحديد رسوم التوصيل ($fee ر.ي). بانتظار موافقة العميل ⏳';
+      }
+
       addNotification('تم تسعير الطلب #$orderId 💰', 'تم تحديد رسوم التوصيل ($fee ر.ي). يرجى من العميل تأكيد الطلب!');
       notifyListeners();
     } catch (e) {
@@ -644,10 +654,18 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> customerApprovePricing(dynamic orderId) async {
+    final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
+    
     await supabase.from('orders').update({
       'status': 'waitingCourierApproval',
       'admin_message': 'تم تأكيد الطلب والموافقة على السعر من قِبل العميل ⏳',
     }).eq('id', orderId);
+
+    if (orderIndex != -1) {
+      orders[orderIndex]['status'] = 'waitingCourierApproval';
+      orders[orderIndex]['admin_message'] = 'تم تأكيد الطلب والموافقة على السعر من قِبل العميل ⏳';
+    }
+
     addNotification('تأكيد الطلب 👍', 'تم تأكيد طلبك #$orderId وجاري إشعار المندوب');
     notifyListeners();
   }
@@ -657,20 +675,35 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> customerCancelOrder(dynamic orderId) async {
+    final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
+
     await supabase.from('orders').update({
       'status': 'cancelledByCustomer',
       'admin_message': 'تم إلغاء الطلب من قِبل العميل ❌',
     }).eq('id', orderId);
+
+    if (orderIndex != -1) {
+      orders[orderIndex]['status'] = 'cancelledByCustomer';
+      orders[orderIndex]['admin_message'] = 'تم إلغاء الطلب من قِبل العميل ❌';
+    }
+
     addNotification('إلغاء الطلب ❌', 'تم إلغاء الطلب #$orderId بناءً على رغبتك');
     notifyListeners();
   }
 
   Future<void> courierRespondToOrder(dynamic orderId, bool accepted) async {
+    final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
+
     if (accepted) {
       await supabase.from('orders').update({
         'status': 'onTheWay',
         'admin_message': 'المندوب قَبِل الطلب وهو في الطريق 🟢',
       }).eq('id', orderId);
+
+      if (orderIndex != -1) {
+        orders[orderIndex]['status'] = 'onTheWay';
+        orders[orderIndex]['admin_message'] = 'المندوب قَبِل الطلب وهو في الطريق 🟢';
+      }
 
       if (currentCourier != null) {
         String cId = currentCourier!['id'].toString();
@@ -684,23 +717,44 @@ class AppState extends ChangeNotifier {
         'assigned_courier': 'لم يتم التعيين',
         'is_fee_sent': false,
       }).eq('id', orderId);
+
+      if (orderIndex != -1) {
+        orders[orderIndex]['status'] = 'rejectedByCourier';
+        orders[orderIndex]['admin_message'] = '⚠️ المندوب رَفَض الطلب!';
+        orders[orderIndex]['assigned_courier'] = 'لم يتم التعيين';
+        orders[orderIndex]['is_fee_sent'] = false;
+      }
     }
     notifyListeners();
   }
 
   Future<void> courierUpdateArrival(dynamic orderId) async {
+    final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
+
     await supabase.from('orders').update({
       'status': 'arrived',
       'admin_message': 'المندوب وصل لموقع العميل 📍',
     }).eq('id', orderId);
+
+    if (orderIndex != -1) {
+      orders[orderIndex]['status'] = 'arrived';
+      orders[orderIndex]['admin_message'] = 'المندوب وصل لموقع العميل 📍';
+    }
     notifyListeners();
   }
 
   Future<void> markOrderDelivered(dynamic orderId) async {
+    final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
+
     await supabase.from('orders').update({
       'status': 'delivered',
       'admin_message': 'تم تسليم الطلب بنجاح ✅',
     }).eq('id', orderId);
+
+    if (orderIndex != -1) {
+      orders[orderIndex]['status'] = 'delivered';
+      orders[orderIndex]['admin_message'] = 'تم تسليم الطلب بنجاح ✅';
+    }
 
     if (currentCourier != null) {
       String cId = currentCourier!['id'].toString();
