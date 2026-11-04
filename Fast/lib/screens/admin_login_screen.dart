@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
-import 'admin_dashboard.dart';
+import 'admin_screen.dart'; // تم توجيهها إلى الشاشة الصحيحة المتوافقة مع AppState
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -91,7 +91,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
                             if (loginSuccess) {
                               Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(builder: (_) => const AdminDashboard()),
+                                MaterialPageRoute(builder: (_) => const AdminScreen()),
                               );
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('مرحباً بك، تم تسجيل الدخول بنجاح! 🚀')),
