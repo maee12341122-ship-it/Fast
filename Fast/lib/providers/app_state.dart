@@ -175,7 +175,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // دالة التحقق من تسجيل دخول المشرف عبر جدول admins في Supabase
+  // دالة التحقق من تسجيل دخول المشرف عبر جدول admins في Supabase مع تنظيف المسافات
   Future<bool> loginAdminFromSupabase(String username, String password) async {
     try {
       final response = await supabase
@@ -187,7 +187,7 @@ class AppState extends ChangeNotifier {
       if (response != null) {
         String dbPassword = response['password_hash'] ?? '';
         
-        if (password.trim() == dbPassword) {
+        if (password.trim() == dbPassword.trim()) {
           isAdminLoggedIn = true;
           SharedPreferences.getInstance().then((prefs) {
             prefs.setBool('isAdminLoggedIn', true);
