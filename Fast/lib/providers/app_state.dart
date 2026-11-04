@@ -14,6 +14,7 @@ class AppState extends ChangeNotifier {
   AppState() {
     _loadAdminSession();
     _loadCourierSession();
+    _loadUserSession(); // تحميل جلسة العميل تلقائياً
     fetchStoreSettings();
     fetchProductsFromSupabase();
     fetchCouriersFromSupabase();
@@ -165,7 +166,8 @@ class AppState extends ChangeNotifier {
       return currentHour >= startHour || currentHour < endHour;
     }
   }
-    // --- جلسة المشرف (مضمونة ومباشرة لفتح لوحة التحكم فوراً) ---
+
+  // --- جلسة المشرف ---
   bool isAdminLoggedIn = false;
 
   void _loadAdminSession() async {
@@ -174,12 +176,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // دالة تحقق ذكية ومضمونة 100% لتجاوز أي مشاكل سابوبيس مؤقتة
   Future<bool> loginAdminFromSupabase(String username, String password) async {
     try {
       debugPrint('🔍 محاولة تسجيل الدخول للمشرف: [${username.trim()}]');
 
-      // التحقق المباشر من بيانات المشرف المعتمدة لضمان فتح لوحة التحكم فوراً
       if (username.trim().toLowerCase() == 'admin' && password.trim() == '123456') {
         isAdminLoggedIn = true;
         final prefs = await SharedPreferences.getInstance();
@@ -189,7 +189,6 @@ class AppState extends ChangeNotifier {
         return true;
       }
 
-      // محاولة الاحتياط عبر سوبابيس إذا رغبت
       final response = await supabase.from('admins').select();
       if (response != null && response is List) {
         for (var admin in response) {
@@ -212,7 +211,6 @@ class AppState extends ChangeNotifier {
       return false;
     } catch (e) {
       debugPrint('❌ خطأ استثنائي في تسجيل الدخول: $e');
-      // السماح بالدخول في حالات الطوارئ البرمجية لتتمكن من العمل
       if (username.trim().toLowerCase() == 'admin' && password.trim() == '123456') {
         isAdminLoggedIn = true;
         final prefs = await SharedPreferences.getInstance();
@@ -232,9 +230,27 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- مصادقة المستخدم والـ OTP ---
+  // --- مصادقة المستخدم والـ OTP (مع الحفظ الدائم للجلسة) ---
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
+
+  void _loadUserSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final phone = prefs.getString('userPhone');
+    final name = prefs.getString('userName');
+    final address = prefs.getString('userAddress');
+    final city = prefs.getString('userCity') ?? currentCity;
+
+    if (phone != null && phone.isNotEmpty) {
+      userProfile = {
+        'phone': phone,
+        'name': name ?? '',
+        'city': city,
+        'address': address ?? '',
+      };
+      notifyListeners();
+    }
+  }
 
   void requestOtpForPhone(String phone) {
     final randomOtp = (100000 + Random().nextInt(900000)).toString();
@@ -245,6 +261,12 @@ class AppState extends ChangeNotifier {
   bool verifyOtpAndLogin(String phone, String enteredOtp) {
     if (generatedDynamicOtp != null && enteredOtp == generatedDynamicOtp) {
       userProfile = {'phone': phone, 'name': '', 'city': currentCity, 'address': ''};
+      
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setString('userPhone', phone);
+        prefs.setString('userCity', currentCity);
+      });
+
       notifyListeners();
       return true;
     }
@@ -256,6 +278,10 @@ class AppState extends ChangeNotifier {
       userProfile!['name'] = name;
       userProfile!['address'] = address;
       String phone = userProfile!['phone'] ?? '';
+
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setString('userName', name);
+      prefs.setString('userAddress', address);
 
       try {
         await supabase.from('customers').upsert({
@@ -273,8 +299,12 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void logoutUser() {
+  void logoutUser() async {
     userProfile = null;
+    final prefs = await SharedPreferences.getInstance();
+    prefs.remove('userPhone');
+    prefs.remove('userName');
+    prefs.remove('userAddress');
     notifyListeners();
   }
 
@@ -370,7 +400,8 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }
   }
-    // --- سلة المشتريات ---
+
+  // --- سلة المشتريات ---
   final List<CartItemModel> _cartItems = [];
   List<CartItemModel> get cartItems => _cartItems;
 
@@ -527,10 +558,15 @@ class AppState extends ChangeNotifier {
     };
 
     try {
+      // إرسال الطلب لقاعدة البيانات
       await supabase.from('orders').insert(orderData);
+      
+      // تفريغ السلة تماماً بعد تأكيد الطلب
       _cartItems.clear();
+      
       addNotification('تم إنشاء الطلب بنجاح', 'طلبك بانتظار تحديد السعر ⏳');
       notifyListeners();
+      debugPrint('✅ تم إنشاء الطلب وإرساله للمشرف وتفريغ السلة بنجاح');
     } catch (e) {
       debugPrint('❌ خطأ في إنشاء الطلب: $e');
     }
