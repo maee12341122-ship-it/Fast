@@ -161,13 +161,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void _checkAndShowPricingDialog(BuildContext context, AppState appState, Color cardBg, Color textColor) {
     if (appState.userProfile == null || appState.isAdminLoggedIn) return;
 
-    final customerPhone = appState.userProfile!['phone'];
-    for (var order in appState.orders) {
-      if (order['phone'] == customerPhone &&
-          order['status'] == 'pricingSentToCustomer' &&
-          !_shownPricingDialogs.contains(order['id'])) {
+    final customerOrders = appState.customerOrders;
+    for (var order in customerOrders) {
+      final orderId = order['id']?.toString() ?? '';
+      final status = order['status']?.toString() ?? '';
 
-        _shownPricingDialogs.add(order['id'].toString());
+      if (status == 'pricingSentToCustomer' && !_shownPricingDialogs.contains(orderId)) {
+        _shownPricingDialogs.add(orderId);
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
           showDialog(
@@ -189,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('طلب #${order['id']}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                    Text('طلب #$orderId', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Text('• رسوم التوصيل: (${order['delivery_fee']} ر.ي)', style: TextStyle(color: textColor, fontSize: 14)),
                     Text('• الإجمالي الكلي: ${order['total_price']} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14)),
@@ -806,17 +806,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildOrdersTab(AppState appState, Color cardBg, Color textColor) {
-    if (appState.orders.isEmpty) {
+    final customerOrders = appState.customerOrders;
+
+    if (customerOrders.isEmpty) {
       return const Center(
-        child: Text('لا توجد طلبات سابقة 📦', style: TextStyle(color: Colors.grey, fontSize: 15)),
+        child: Text('لا توجد طلبات سابقة خاصة بك 📦', style: TextStyle(color: Colors.grey, fontSize: 15)),
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: appState.orders.length,
+      itemCount: customerOrders.length,
       itemBuilder: (context, index) {
-        final order = appState.orders[index];
+        final order = customerOrders[index];
         final status = order['status'] ?? '';
         final arabicStatus = _getArabicStatus(status);
 
