@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../providers/app_state.dart';
-import 'map_location_screen.dart';
-import '../auth/phone_auth_screen.dart';
+import '../home_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({Key? key}) : super(key: key);
@@ -12,162 +14,284 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  final TextEditingController _nameController = TextEditingController(text: 'عميل تعز إكسبرس');
-  final TextEditingController _addressController = TextEditingController(text: 'تعز - شارع جمال');
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressDescriptionController = TextEditingController();
+
+  // إحداثيات افتراضية لمدينة تعز (مركز المدينة)
+  LatLng _selectedLocation = const LatLng(13.5779, 44.0219);
+  final MapController _mapController = MapController();
+  bool _isLoadingLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final appState = Provider.of<AppState>(context, listen: false);
+    if (appState.userProfile != null) {
+      _nameController.text = appState.userProfile!['name'] ?? '';
+      _phoneController.text = appState.userProfile!['phone'] ?? '';
+      _addressDescriptionController.text = appState.userProfile!['address'] ?? '';
+    }
+    // طلب أذونات الموقع وفحصها فور فتح شاشة إتمام الطلب
+    _determinePosition();
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _addressController.dispose();
+    _phoneController.dispose();
+    _addressDescriptionController.dispose();
     super.dispose();
+  }
+
+  // --- دالة طلب أذونات الموقع وجلب الإحداثيات الحالية ---
+  Future<void> _determinePosition() async {
+    setState(() => _isLoadingLocation = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('الرجاء تفعيل خدمة الموقع (GPS) في جهازك')),
+        );
+        setState(() => _isLoadingLocation = false);
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تم رفض إذن الوصول إلى الموقع')),
+          );
+          setState(() => _isLoadingLocation = false);
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('إذن الموقع مرفوض بشكل دائم، يرجى تفعيله من الإعدادات')),
+        );
+        setState(() => _isLoadingLocation = false);
+        return;
+      }
+
+      // جلب الموقع الحالي بدقة عالية
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _selectedLocation = LatLng(position.latitude, position.longitude);
+        _isLoadingLocation = false;
+      });
+
+      // تحريك الخريطة بسلاسة إلى موقع العميل الحالي
+      _mapController.move(_selectedLocation, 16.0);
+    } catch (e) {
+      setState(() => _isLoadingLocation = false);
+      debugPrint('❌ خطأ في تحديد الموقع: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
-
-    // التحقق التلقائي: إذا لم يكن مسجلاً، وجهه لشاشة تسجيل الدخول فوراً
-    if (appState.userProfile == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PhoneAuthScreen(
-              onLoginSuccess: () {
-                Navigator.pop(context);
-              },
-            ),
-          ),
-        );
-      });
-      return const Scaffold(
-        backgroundColor: Color(0xFF121212),
-        body: Center(child: CircularProgressIndicator(color: Colors.amber)),
-      );
-    }
-
-    final String registeredPhone = appState.userProfile!['phone'] ?? '';
+    final isDark = appState.isDarkMode;
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[100],
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1E1E1E),
-          title: const Text('تأكيد الطلب وإرسال البيانات', style: TextStyle(color: Colors.white)),
+          backgroundColor: cardBg,
+          title: const Text('تأكيد الطلب وتحديد الموقع', style: TextStyle(color: Colors.amber, fontSize: 16)),
+          iconTheme: const IconThemeData(color: Colors.amber),
         ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  margin: const EdgeInsets.only(bottom: 15),
-                  decoration: BoxDecoration(color: Colors.green[800], borderRadius: BorderRadius.circular(8)),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.white),
-                      const SizedBox(width: 10),
-                      Text('حسابك مسجل برقم: $registeredPhone', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-                const Text('بيانات المستلم', style: TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _nameController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    labelText: 'اسم العميل الكامل',
-                    labelStyle: TextStyle(color: Colors.grey),
-                    filled: true,
-                    fillColor: Color(0xFF1E1E1E),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                // رقم الهاتف مثبت ولا يتم طلبه مرة أخرى لأنه تم التحقق منه مسبقاً
-                TextField(
-                  enabled: false,
-                  style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
-                  decoration: InputDecoration(
-                    labelText: 'رقم الهاتف (تم التحقق منه)',
-                    hintText: registeredPhone,
-                    hintStyle: const TextStyle(color: Colors.amber),
-                    filled: true,
-                    fillColor: const Color(0xFF1E1E1E),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _addressController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: 'العنوان بالتفصيل (الشارع، الحارة...)',
-                    labelStyle: const TextStyle(color: Colors.grey),
-                    filled: true,
-                    fillColor: const Color(0xFF1E1E1E),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.map, color: Colors.amber),
-                      onPressed: () async {
-                        final loc = await Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const MapLocationScreen()),
-                        );
-                        if (loc != null && loc is String) {
-                          setState(() {
-                            _addressController.text = loc;
-                          });
-                        }
-                      },
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // حقول البيانات الشخصية
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('بيانات المستلم', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _nameController,
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
+                      labelText: 'الاسم الكامل',
+                      labelStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF121212) : Colors.grey[100],
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                const Text('ملخص سلة المشتريات', style: TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
+                      labelText: 'رقم الهاتف',
+                      labelStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF121212) : Colors.grey[100],
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _addressDescriptionController,
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
+                      labelText: 'تفاصيل العنوان (مثلاً: شارع جمال، بجوار...)',
+                      labelStyle: const TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF121212) : Colors.grey[100],
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // خريطة حقيقية لتحديد موقع التوصيل
+            const Text('حدد موقعك بدقة على الخريطة 📍', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
+            const SizedBox(height: 8),
+            Container(
+              height: 250,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber, width: 1.5),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
                   children: [
-                    const Text('إجمالي المنتجات:', style: TextStyle(color: Colors.white70)),
-                    Text('${appState.totalAmount} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: _selectedLocation,
+                        initialZoom: 15.0,
+                        onTap: (tapPosition, point) {
+                          setState(() {
+                            _selectedLocation = point;
+                          });
+                        },
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.fast.taiz',
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: _selectedLocation,
+                              width: 50,
+                              height: 50,
+                              child: const Icon(Icons.location_pin, color: Colors.red, size: 45),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (_isLoadingLocation)
+                      Container(
+                        color: Colors.black54,
+                        child: const Center(
+                          child: CircularProgressIndicator(color: Colors.amber),
+                        ),
+                      ),
+                    Positioned(
+                      bottom: 10,
+                      left: 10,
+                      child: FloatingActionButton.small(
+                        backgroundColor: Colors.amber,
+                        onPressed: _determinePosition,
+                        child: const Icon(Icons.my_location, color: Colors.black),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 5),
-                const Text('ملاحظة: سيقوم المشرف بتحديد رسوم التوصيل وإرسالها لك في طلباتي للموافقة.', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                const SizedBox(height: 30),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  onPressed: () {
-                    if (_nameController.text.isNotEmpty && _addressController.text.isNotEmpty) {
-                      final itemsDesc = appState.cartItems.map((e) => '${e.name} (${e.quantity} قطعه)').join(', ');
-                      appState.createOrder(
-                        customerName: _nameController.text,
-                        phone: registeredPhone,
-                        address: _addressController.text,
-                        itemsDesc: itemsDesc,
-                        productsTotal: appState.totalAmount,
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('تم إرسال الطلب بنجاح إلى لوحة المشرف!')),
-                      );
-                      Navigator.pop(context);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('الرجاء إكمال الاسم والعنوان')),
-                      );
-                    }
-                  },
-                  child: const Text('إرسال الطلب للمشرف', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(height: 20),
+
+            // ملخص السلة
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.between,
+                children: [
+                  Text('إجمالي المنتجات:', style: TextStyle(color: textColor, fontSize: 15)),
+                  Text('${appState.totalAmount} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // زر إرسال الطلب النهائي
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () async {
+                if (_nameController.text.isEmpty || _phoneController.text.isEmpty || _addressDescriptionController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('الرجاء إكمال جميع بيانات الاسم ورقم الهاتف والعنوان')),
+                  );
+                  return;
+                }
+
+                // دمج الوصف النصي مع الإحداثيات الجغرافية كعنوان متكامل
+                final fullAddress = '${_addressDescriptionController.text} (الإحداثيات: ${_selectedLocation.latitude.toStringAsFixed(4)}, ${_selectedLocation.longitude.toStringAsFixed(4)})';
+
+                // وصف المنتجات في السلة
+                final itemsDesc = appState.cartItems.map((item) => '${item.name} (x${item.quantity})').join(', ');
+
+                // حفظ ملف العميل وإرسال الطلب إلى Supabase مباشرة
+                await appState.saveUserProfileDetails(_nameController.text, fullAddress);
+                await appState.createOrder(
+                  customerName: _nameController.text,
+                  phone: _phoneController.text,
+                  address: fullAddress,
+                  itemsDesc: itemsDesc,
+                  productsTotal: appState.totalAmount,
+                );
+
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                  (route) => false,
+                );
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('تم إرسال طلبك بنجاح! بانتظار تسعير المشرف ⏳')),
+                );
+              },
+              child: const Text('تأكيد وإرسال الطلب للمشرف 🚀', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+          ],
         ),
       ),
     );
