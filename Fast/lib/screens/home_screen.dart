@@ -48,8 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: Colors.amber.withOpacity(0.3)),
           ),
-          title: Row(
-            children: const [
+          title: const Row(
+            children: [
               Icon(Icons.exit_to_app, color: Colors.amber),
               SizedBox(width: 10),
               Text('تأكيد الخروج', style: TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
@@ -89,8 +89,9 @@ class _HomeScreenState extends State<HomeScreen> {
           textDirection: TextDirection.rtl,
           child: AlertDialog(
             backgroundColor: cardBg,
-            title: Row(
-              children: const [
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
                 Icon(Icons.star, color: Colors.amber),
                 SizedBox(width: 10),
                 Text('تقييم المندوب والطلب', style: TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
@@ -126,15 +127,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     labelText: 'ملاحظاتك أو شكر للمندوب (اختياري)',
                     labelStyle: const TextStyle(color: Colors.grey),
                     filled: true,
-                    fillColor: Colors.grey[900],
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    fillColor: const Color(0xFF121212),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ],
             ),
             actions: [
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
                 onPressed: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -153,7 +157,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-    void _checkAndShowPricingDialog(BuildContext context, AppState appState, Color cardBg, Color textColor) {
+
+  void _checkAndShowPricingDialog(BuildContext context, AppState appState, Color cardBg, Color textColor) {
     if (appState.userProfile == null || appState.isAdminLoggedIn) return;
 
     final customerPhone = appState.userProfile!['phone'];
@@ -172,8 +177,9 @@ class _HomeScreenState extends State<HomeScreen> {
               textDirection: TextDirection.rtl,
               child: AlertDialog(
                 backgroundColor: cardBg,
-                title: Row(
-                  children: const [
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Row(
+                  children: [
                     Icon(Icons.notifications_active, color: Colors.amber),
                     SizedBox(width: 10),
                     Text('تسعيرة جديدة من المشرف', style: TextStyle(color: Colors.amber, fontSize: 16)),
@@ -193,7 +199,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 actions: [
                   ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
                     onPressed: () {
                       appState.customerConfirmOrder(order['id']);
                       Navigator.pop(context);
@@ -252,6 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: themeBg,
           appBar: AppBar(
             backgroundColor: cardBg,
+            elevation: 2,
             title: Row(
               children: [
                 const SizedBox(
@@ -290,7 +300,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       context: context,
                       builder: (context) => AlertDialog(
                         backgroundColor: cardBg,
-                        title: Text('تسجيل دخول المشرف الآمن', style: TextStyle(color: textColor, fontSize: 14)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: Text('تسجيل دخول المشرف الآمن', style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.bold)),
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -300,9 +311,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'اسم المستخدم',
                                 labelStyle: TextStyle(color: Colors.grey),
+                                border: OutlineInputBorder(),
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 12),
                             TextField(
                               controller: passwordController,
                               obscureText: true,
@@ -310,6 +322,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               decoration: const InputDecoration(
                                 labelText: 'كلمة المرور',
                                 labelStyle: TextStyle(color: Colors.grey),
+                                border: OutlineInputBorder(),
                               ),
                             ),
                           ],
@@ -320,7 +333,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
                           ),
                           ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
                             onPressed: () async {
                               String username = usernameController.text.trim();
                               String password = passwordController.text.trim();
@@ -353,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-                    body: IndexedStack(
+          body: IndexedStack(
             index: _currentIndex,
             children: pages,
           ),
@@ -421,8 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (selectedCategory == 'طلبات أخرى') {
       return Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: ListView(
           children: [
             _buildCategoriesBar(appState, textColor, cardBg),
             const SizedBox(height: 20),
@@ -430,14 +445,25 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: cardBg,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.amber, width: 1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.amber.withOpacity(0.4), width: 1),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4)),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('طلب خاص أو خدمة أخرى (مثل: غاز، قات، طلبات من السوق...)', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
-                  const SizedBox(height: 15),
+                  const Row(
+                    children: [
+                      Icon(Icons.edit_note, color: Colors.amber, size: 24),
+                      SizedBox(width: 8),
+                      Text('طلب خاص أو خدمة أخرى', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('(مثل: غاز، قات، طلبات خاصة من السوق...)', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                  const SizedBox(height: 20),
                   TextField(
                     controller: _customItemNameController,
                     style: TextStyle(color: textColor),
@@ -446,10 +472,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       labelStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: appState.isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   TextField(
                     controller: _customItemPriceController,
                     keyboardType: TextInputType.number,
@@ -459,14 +485,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       labelStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: appState.isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: appState.isStoreOpen ? Colors.amber : Colors.grey,
-                      minimumSize: const Size(double.infinity, 45),
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: appState.isStoreOpen
                         ? () {
@@ -479,7 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               _customItemNameController.clear();
                               _customItemPriceController.clear();
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('تمت إضافة الطلب الخاص إلى السلة بنجاح!')),
+                                const SnackBar(content: Text('تمت إضافة الطلب الخاص إلى السلة بنجاح! 🚀')),
                               );
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -493,8 +520,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           },
                     child: Text(
-                      appState.isStoreOpen ? 'إضافة الطلب الخاص للسلة وتجميعه' : 'التطبيق مغلق حالياً 🛑',
-                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                      appState.isStoreOpen ? 'إضافة الطلب الخاص للسلة وتجميعه 🛒' : 'التطبيق مغلق حالياً 🛑',
+                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                   ),
                 ],
@@ -504,7 +531,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-        final searchQuery = _searchController.text.trim().toLowerCase();
+
+    final searchQuery = _searchController.text.trim().toLowerCase();
     final filteredProducts = (appState.products as List).map((e) => e as ProductModel).where((p) {
       final matchesCategory = selectedCategory == 'الكل' || p.category == selectedCategory;
       final matchesSearch = searchQuery.isEmpty ||
@@ -525,7 +553,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             color: cardBg,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -557,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 prefixIcon: const Icon(Icons.search, color: Colors.amber),
                 filled: true,
                 fillColor: cardBg,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
               onChanged: (val) => setState(() {}),
             ),
@@ -567,7 +595,7 @@ class _HomeScreenState extends State<HomeScreen> {
           filteredProducts.isEmpty
               ? const Padding(
                   padding: EdgeInsets.all(50.0),
-                  child: Center(child: Text('لا توجد نتائج مطابقة للبحث', style: TextStyle(color: Colors.grey))),
+                  child: Center(child: Text('لا توجد نتائج مطابقة للبحث 🔍', style: TextStyle(color: Colors.grey, fontSize: 15))),
                 )
               : ListView.builder(
                   shrinkWrap: true,
@@ -583,9 +611,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     return Card(
                       color: cardBg,
                       margin: const EdgeInsets.symmetric(vertical: 6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 2,
                       child: ListTile(
-                        title: Text(product.name, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        title: Text(product.name, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 15)),
                         subtitle: Text(
                           '${product.restaurantName} - ${product.price} ر.ي / (${product.category})',
                           style: const TextStyle(color: Colors.grey, fontSize: 13),
@@ -594,7 +624,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.amber,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
                                 ),
                                 onPressed: appState.isStoreOpen
                                     ? () {
@@ -614,12 +645,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.amber, size: 20),
+                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 22),
                                     onPressed: () => appState.updateQuantity(product.id, -1),
                                   ),
-                                  Text('$qtyInCart', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                                  Text('$qtyInCart', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 15)),
                                   IconButton(
-                                    icon: const Icon(Icons.add_circle_outline, color: Colors.amber, size: 20),
+                                    icon: const Icon(Icons.add_circle_outline, color: Colors.greenAccent, size: 22),
                                     onPressed: () => appState.updateQuantity(product.id, 1),
                                   ),
                                 ],
@@ -635,7 +666,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCategoriesBar(AppState appState, Color textColor, Color cardBg) {
     return SizedBox(
-      height: 45,
+      height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -648,6 +679,7 @@ class _HomeScreenState extends State<HomeScreen> {
               selected: isSelected,
               selectedColor: Colors.amber,
               backgroundColor: cardBg,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               onSelected: (val) => setState(() => selectedCategory = cat),
             ),
           );
@@ -664,12 +696,16 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.lock_outline, size: 60, color: Colors.amber),
+              const Icon(Icons.lock_outline, size: 70, color: Colors.amber),
               const SizedBox(height: 15),
               Text('يجب تسجيل الدخول للوصول إلى السلة ومتابعة طلباتك', style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
               const SizedBox(height: 20),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, minimumSize: const Size(200, 45)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber, 
+                  minimumSize: const Size(220, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -680,7 +716,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-                child: const Text('تسجيل الدخول برقم الهاتف', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                child: const Text('تسجيل الدخول برقم الهاتف 📱', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
               ),
             ],
           ),
@@ -697,50 +733,50 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 10),
           Expanded(
             child: appState.cartItems.isEmpty
-                ? const Center(child: Text('السلة فارغة حالياً', style: TextStyle(color: Colors.grey)))
+                ? const Center(child: Text('السلة فارغة حالياً 🛒', style: TextStyle(color: Colors.grey, fontSize: 15)))
                 : ListView.builder(
-              itemCount: appState.cartItems.length,
-              itemBuilder: (context, index) {
-                final CartItemModel item = appState.cartItems[index];
-                return Card(
-                  color: cardBg,
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: ListTile(
-                    title: Text(item.name, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-                    subtitle: Text('السعر: ${item.price} ر.ي | الكمية: ${item.quantity} | الإجمالي: ${item.price * item.quantity} ر.ي', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.redAccent),
-                          onPressed: () => appState.removeFromCart(item.id),
+                    itemCount: appState.cartItems.length,
+                    itemBuilder: (context, index) {
+                      final CartItemModel item = appState.cartItems[index];
+                      return Card(
+                        color: cardBg,
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: ListTile(
+                          title: Text(item.name, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                          subtitle: Text('السعر: ${item.price} ر.ي | الكمية: ${item.quantity} | الإجمالي: ${item.price * item.quantity} ر.ي', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                            onPressed: () => appState.removeFromCart(item.id),
+                          ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
           if (appState.cartItems.isNotEmpty) ...[
-            const Divider(color: Colors.grey),
+            const Divider(color: Colors.white12, height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('إجمالي السلة المجمعة:', style: TextStyle(color: textColor)),
-                Text('${appState.totalAmount} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                Text('إجمالي السلة المجمعة:', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                Text('${appState.totalAmount} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
               ],
             ),
             const SizedBox(height: 15),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, minimumSize: const Size(double.infinity, 45)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber, 
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const CheckoutScreen()),
                 );
               },
-              child: Text('الانتقال لتأكيد الطلب المجمع (${appState.totalAmount} ر.ي)', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: Text('الانتقال لتأكيد الطلب المجمع (${appState.totalAmount} ر.ي) 🚀', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
             ),
           ],
         ],
@@ -772,7 +808,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildOrdersTab(AppState appState, Color cardBg, Color textColor) {
     if (appState.orders.isEmpty) {
       return const Center(
-        child: Text('لا توجد طلبات سابقة', style: TextStyle(color: Colors.grey)),
+        child: Text('لا توجد طلبات سابقة 📦', style: TextStyle(color: Colors.grey, fontSize: 15)),
       );
     }
 
@@ -793,23 +829,25 @@ class _HomeScreenState extends State<HomeScreen> {
         return Card(
           color: cardBg,
           margin: const EdgeInsets.symmetric(vertical: 8),
+          elevation: 4,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             side: BorderSide(color: Colors.amber.withOpacity(0.3)),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(14.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('طلب #${order['id']}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
+                    Text('طلب #${order['id']}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.share, color: Colors.amber, size: 20),
+                          style: IconButton.styleFrom(backgroundColor: Colors.black26),
+                          icon: const Icon(Icons.share, color: Colors.amber, size: 18),
                           tooltip: 'مشاركة الفاتورة',
                           onPressed: () {
                             final invoiceText = '⚡ فاتورة تطبيق FAST - تعز\n'
@@ -822,8 +860,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             Share.share(invoiceText);
                           },
                         ),
+                        const SizedBox(width: 6),
                         IconButton(
-                          icon: const Icon(Icons.chat, color: Colors.amber),
+                          style: IconButton.styleFrom(backgroundColor: Colors.blueGrey[800]),
+                          icon: const Icon(Icons.chat, color: Colors.amber, size: 18),
                           tooltip: 'مراسلة الإدارة ودعم الطلب',
                           onPressed: () {
                             Navigator.push(
@@ -842,7 +882,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     _buildStepIndicator(1, 'الطلب', currentStep >= 1),
@@ -854,31 +894,31 @@ class _HomeScreenState extends State<HomeScreen> {
                     _buildStepIndicator(4, 'التوصيل', currentStep >= 4),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const Divider(color: Colors.white12, height: 20),
                 Text('الحالة: $arabicStatus', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 6),
                 Text('العنوان: ${order['address']}', style: TextStyle(color: textColor, fontSize: 13)),
                 Text('المنتجات: ${order['items_description']}', style: TextStyle(color: textColor, fontSize: 13)),
                 Text('سعر المنتجات: ${order['products_total']} ر.ي', style: TextStyle(color: textColor, fontSize: 13)),
                 Text('رسوم التوصيل: ${order['delivery_fee']} ر.ي', style: const TextStyle(color: Colors.greenAccent, fontSize: 13, fontWeight: FontWeight.bold)),
-                const Divider(color: Colors.grey),
+                const Divider(color: Colors.white12, height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('الإجمالي الكلي:', style: TextStyle(color: textColor, fontSize: 13)),
-                    Text('${order['total_price']} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text('الإجمالي الكلي:', style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold)),
+                    Text('${order['total_price']} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
                   ],
                 ),
                 if (status == 'delivered' || status == 'arrived') ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber.withOpacity(0.2),
+                      backgroundColor: Colors.amber.withOpacity(0.15),
                       foregroundColor: Colors.amber,
-                      minimumSize: const Size(double.infinity, 38),
+                      minimumSize: const Size(double.infinity, 42),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: const BorderSide(color: Colors.amber),
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.amber.withOpacity(0.5)),
                       ),
                     ),
                     onPressed: () {
@@ -895,12 +935,13 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-    Widget _buildStepIndicator(int stepNumber, String title, bool isCompleted) {
+
+  Widget _buildStepIndicator(int stepNumber, String title, bool isCompleted) {
     return Column(
       children: [
         Container(
-          width: 26,
-          height: 26,
+          width: 28,
+          height: 28,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isCompleted ? Colors.amber : Colors.grey[800],
@@ -908,12 +949,12 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Center(
             child: Text(
               '$stepNumber',
-              style: TextStyle(color: isCompleted ? Colors.black : Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+              style: TextStyle(color: isCompleted ? Colors.black : Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),
         ),
         const SizedBox(height: 4),
-        Text(title, style: TextStyle(color: isCompleted ? Colors.amber : Colors.grey, fontSize: 10)),
+        Text(title, style: TextStyle(color: isCompleted ? Colors.amber : Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -943,22 +984,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: cardBg,
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.amber.withOpacity(0.3)),
                 ),
                 child: Column(
                   children: [
-                    const Icon(Icons.person, size: 50, color: Colors.amber),
+                    const Icon(Icons.person, size: 60, color: Colors.amber),
                     const SizedBox(height: 10),
                     Text('أنت لست مسجل دخول!', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 5),
-                    const Text('سجل دخولك برقم هاتفك للاستمتاع بتجربة التوصيل الأسرع في تعز.', style: TextStyle(color: Colors.grey, fontSize: 12), textAlign: TextAlign.center),
-                    const SizedBox(height: 15),
+                    const Text('سجل دخولك برقم هاتفك للاستمتاع بتجربة التوصيل الأسرع في تعز.', style: TextStyle(color: Colors.grey, fontSize: 13), textAlign: TextAlign.center),
+                    const SizedBox(height: 18),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.amber,
-                        minimumSize: const Size(double.infinity, 45),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () {
                         Navigator.push(
@@ -966,23 +1007,24 @@ class _HomeScreenState extends State<HomeScreen> {
                           MaterialPageRoute(builder: (context) => const PhoneAuthScreen()),
                         );
                       },
-                      child: const Text('تسجيل الدخول برقم الهاتف', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                      child: const Text('تسجيل الدخول برقم الهاتف 📱', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
                   ],
                 ),
               )
             : Container(
-                padding: const EdgeInsets.all(15),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: cardBg,
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.amber.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
                     const CircleAvatar(
                       backgroundColor: Colors.amber,
-                      child: Icon(Icons.person, color: Colors.black),
+                      radius: 24,
+                      child: Icon(Icons.person, color: Colors.black, size: 28),
                     ),
                     const SizedBox(width: 15),
                     Expanded(
@@ -990,7 +1032,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(profile['name'] ?? 'عميل FAST', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 4),
                           Text('📞 ${profile['phone']} | 📍 تعز', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                           if (profile['address'] != null && profile['address'].toString().isNotEmpty)
                             Text('🏠 العنوان: ${profile['address']}', style: const TextStyle(color: Colors.amber, fontSize: 12)),
@@ -999,7 +1041,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     TextButton(
                       onPressed: () => appState.logoutUser(),
-                      child: const Text('خروج', style: TextStyle(color: Colors.redAccent)),
+                      child: const Text('خروج', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -1019,7 +1061,8 @@ class _HomeScreenState extends State<HomeScreen> {
             context: context,
             builder: (context) => AlertDialog(
               backgroundColor: cardBg,
-              title: Text('العناوين المحفوظة', style: TextStyle(color: textColor)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('العناوين المحفوظة', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
               content: Text(
                 profile != null && profile['address'] != null && profile['address'].toString().isNotEmpty
                     ? 'العنوان النشط حالياً:\n${profile['address']}'
@@ -1027,7 +1070,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(color: Colors.grey),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسناً', style: TextStyle(color: Colors.amber)))
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسناً', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)))
               ],
             ),
           );
@@ -1037,10 +1080,11 @@ class _HomeScreenState extends State<HomeScreen> {
             context: context,
             builder: (context) => AlertDialog(
               backgroundColor: cardBg,
-              title: Text('العروض الترويجية', style: TextStyle(color: textColor)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('العروض الترويجية', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
               content: const Text('ترقبوا أقوى خصومات التوصيل ومجانيات المطاعم قريباً في تعز مع FAST! 🎁', style: TextStyle(color: Colors.grey)),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق', style: TextStyle(color: Colors.amber)))
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)))
               ],
             ),
           );
@@ -1053,13 +1097,14 @@ class _HomeScreenState extends State<HomeScreen> {
             context: context,
             builder: (context) => AlertDialog(
               backgroundColor: cardBg,
-              title: Text('كيف نعمل؟', style: TextStyle(color: textColor)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('كيف نعمل؟', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
               content: const Text(
                 '1. تختار منتجاتك أو تطلب طلباً خاصاً.\n2. تحدد الإدارة سعر التوصيل.\n3. توافق على التسعير ليذهب الطلب للمندوب.\n4. يستلم طلبك حتى باب منزلك بكل سرعة!',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Colors.grey, height: 1.5),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('فهمت', style: TextStyle(color: Colors.amber)))
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('فهمت', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)))
               ],
             ),
           );
@@ -1069,7 +1114,8 @@ class _HomeScreenState extends State<HomeScreen> {
             context: context,
             builder: (context) => AlertDialog(
               backgroundColor: cardBg,
-              title: Text('خدمة العملاء', style: TextStyle(color: textColor)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('خدمة العملاء', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1080,7 +1126,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق', style: TextStyle(color: Colors.amber)))
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)))
               ],
             ),
           );
@@ -1094,11 +1140,12 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
       ),
       child: ListTile(
         leading: Icon(icon, color: Colors.amber),
-        title: Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+        title: Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
         onTap: onTap,
       ),
