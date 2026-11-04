@@ -227,7 +227,7 @@ class AppState extends ChangeNotifier {
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
 
-  // توافقية مع `user` في Drawer
+  // توافقية مع ودجت `user` في القائمة الجانبية Drawer
   dynamic get user => userProfile == null ? null : _UserMock(userProfile!['name'] ?? '', userProfile!['phone'] ?? '');
 
   void _loadUserSession() async {
@@ -248,7 +248,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // 👈 فحص الرقم في قاعدة البيانات Supabase (إذا كان مسجلاً مسبقاً، يدخل مباشرة بدون OTP)
+  // 👈 فحص الرقم في قاعدة البيانات Supabase (إذا كان مسجلاً مسبقاً، يدخل مباشرة دون OTP)
   Future<bool> checkAndLoginCustomer(String phone) async {
     try {
       String cleanPhone = _normalizePhone(phone);
@@ -573,7 +573,7 @@ class AppState extends ChangeNotifier {
 
       supabase.from('orders').stream(primaryKey: ['id']).listen((data) {
         orders = List.from(data);
-        notifyListeners(); // 👈 تحديث فوري ولحظي لكل شاشات التطبيق
+        notifyListeners(); // 👈 تحديث فوري ولحظي لكل شاشات التطبيق (مشرف، عميل، مندوب)
       }, onError: (error) {
         debugPrint('⚠️ خطأ في الاستماع للطلبات: $error');
       });
@@ -632,6 +632,7 @@ class AppState extends ChangeNotifier {
       }).eq('id', orderId);
 
       addNotification('تم تسعير الطلب #$orderId 💰', 'تم تحديد رسوم التوصيل ($fee ر.ي). يرجى من العميل تأكيد الطلب!');
+      notifyListeners();
     } catch (e) {
       debugPrint('❌ خطأ تحديث الرسوم: $e');
     }
@@ -643,6 +644,7 @@ class AppState extends ChangeNotifier {
       'admin_message': 'تم تأكيد الطلب والموافقة على السعر من قِبل العميل ⏳',
     }).eq('id', orderId);
     addNotification('تأكيد الطلب 👍', 'تم تأكيد طلبك #$orderId وجاري إشعار المندوب');
+    notifyListeners();
   }
 
   Future<void> customerConfirmOrder(dynamic orderId) async {
@@ -655,6 +657,7 @@ class AppState extends ChangeNotifier {
       'admin_message': 'تم إلغاء الطلب من قِبل العميل ❌',
     }).eq('id', orderId);
     addNotification('إلغاء الطلب ❌', 'تم إلغاء الطلب #$orderId بناءً على رغبتك');
+    notifyListeners();
   }
 
   Future<void> courierRespondToOrder(dynamic orderId, bool accepted) async {
@@ -677,6 +680,7 @@ class AppState extends ChangeNotifier {
         'is_fee_sent': false,
       }).eq('id', orderId);
     }
+    notifyListeners();
   }
 
   Future<void> courierUpdateArrival(dynamic orderId) async {
@@ -684,6 +688,7 @@ class AppState extends ChangeNotifier {
       'status': 'arrived',
       'admin_message': 'المندوب وصل لموقع العميل 📍',
     }).eq('id', orderId);
+    notifyListeners();
   }
 
   Future<void> markOrderDelivered(dynamic orderId) async {
@@ -697,6 +702,7 @@ class AppState extends ChangeNotifier {
       await supabase.from('couriers').update({'status': 'available'}).eq('id', cId);
       currentCourier!['status'] = 'available';
     }
+    notifyListeners();
   }
 }
 
