@@ -223,7 +223,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- مصادقة العميل وتعديل الملف الشخصي ---
+  // --- مصادقة العميل والتحقق الذكي من قاعدة البيانات (عدم الحاجة لـ OTP إذا كان الرقم مسجلاً مسبقاً) ---
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
 
@@ -245,6 +245,44 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // 👈 فحص الرقم في قاعدة البيانات Supabase عند محاولة تسجيل الدخول
+  Future<bool> checkAndLoginCustomer(String phone) async {
+    try {
+      String cleanPhone = _normalizePhone(phone);
+      final response = await supabase
+          .from('customers')
+          .select()
+          .eq('phone', cleanPhone)
+          .maybeSingle();
+
+      if (response != null) {
+        // العميل موجود مسبقاً في قاعدة البيانات! يتم تسجيل دخوله مباشرة دون OTP
+        String name = response['name']?.toString() ?? '';
+        String address = response['address']?.toString() ?? '';
+
+        userProfile = {
+          'phone': cleanPhone,
+          'name': name,
+          'city': currentCity,
+          'address': address,
+        };
+
+        final prefs = await SharedPreferences.getInstance();
+        prefs.setString('userPhone', cleanPhone);
+        prefs.setString('userName', name);
+        prefs.setString('userAddress', address);
+        prefs.setString('userCity', currentCity);
+
+        notifyListeners();
+        return true; // تم الدخول بنجاح بدون OTP
+      }
+      return false; // الرقم غير موجود، يتطلب إرسال OTP
+    } catch (e) {
+      debugPrint('❌ خطأ فحص العميل: $e');
+      return false;
+    }
+  }
+
   void requestOtpForPhone(String phone) {
     final randomOtp = (100000 + Random().nextInt(900000)).toString();
     generatedDynamicOtp = randomOtp;
@@ -253,10 +291,11 @@ class AppState extends ChangeNotifier {
 
   bool verifyOtpAndLogin(String phone, String enteredOtp) {
     if (generatedDynamicOtp != null && enteredOtp == generatedDynamicOtp) {
-      userProfile = {'phone': phone, 'name': '', 'city': currentCity, 'address': ''};
+      String cleanPhone = _normalizePhone(phone);
+      userProfile = {'phone': cleanPhone, 'name': '', 'city': currentCity, 'address': ''};
       
       SharedPreferences.getInstance().then((prefs) {
-        prefs.setString('userPhone', phone);
+        prefs.setString('userPhone', cleanPhone);
         prefs.setString('userCity', currentCity);
       });
 
@@ -266,6 +305,7 @@ class AppState extends ChangeNotifier {
     return false;
   }
 
+  // 👈 حفظ وتحديث بيانات العميل (الاسم والعنوان) في SharedPreferences و Supabase
   Future<void> saveUserProfileDetails(String name, String address) async {
     if (userProfile != null) {
       userProfile!['name'] = name;
@@ -495,7 +535,6 @@ class AppState extends ChangeNotifier {
   List orders = [];
   List notifications = [];
 
-  // 👈 دالة تنظيف ومقارنة أرقام الهواتف لمنع أي تداخل بين العملاء
   String _normalizePhone(String phone) {
     String clean = phone.trim().replaceAll(' ', '');
     if (clean.startsWith('0')) {
@@ -533,7 +572,7 @@ class AppState extends ChangeNotifier {
 
       supabase.from('orders').stream(primaryKey: ['id']).listen((data) {
         orders = List.from(data);
-        notifyListeners(); // 👈 تحديث فوري ولحظي لكل شاشات التطبيق (المشرف، العميل، المندوب) بدون إغلاق
+        notifyListeners();
       }, onError: (error) {
         debugPrint('⚠️ خطأ في الاستماع للطلبات: $error');
       });
@@ -617,7 +656,6 @@ class AppState extends ChangeNotifier {
     addNotification('إلغاء الطلب ❌', 'تم إلغاء الطلب #$orderId بناءً على رغبتك');
   }
 
-  // --- رد المندوب وتحديث حالته إلى مشغول/متاح ---
   Future<void> courierRespondToOrder(dynamic orderId, bool accepted) async {
     if (accepted) {
       await supabase.from('orders').update({
