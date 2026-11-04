@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'providers/app_state.dart';
-import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart'; // استيراد شاشة البداية الاحترافية
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +35,7 @@ class FastApp extends StatelessWidget {
     final appState = Provider.of<AppState>(context);
 
     return MaterialApp(
-      title: 'Fast', // تم تعديل اسم التطبيق ليصبح Fast رسمياً
+      title: 'Fast',
       debugShowCheckedModeBanner: false,
       themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
@@ -62,8 +62,8 @@ class FastApp extends StatelessWidget {
           foregroundColor: Colors.amber,
         ),
       ),
-      // فتح التطبيق مباشرة على الصفحة الرئيسية وتأجيل الدخول للوصول للسلة
-      home: const HomeScreen(),
+      // جعل شاشة الـ Splash هي نقطة البداية الاحترافية للتطبيق
+      home: const SplashScreen(),
     );
   }
 }
