@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // مهم لإغلاق التطبيق نهائياً عبر SystemNavigator.pop()
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart'; // لمشاركة الفواتير والطلبات
 import '../providers/app_state.dart';
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
@@ -666,60 +667,149 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // --- شاشة طلباتي مع مؤشر خطوات الطلب المرئي وزر مشاركة الفاتورة ---
   Widget _buildOrdersTab(AppState appState, Color cardBg, Color textColor) {
     if (appState.orders.isEmpty) {
-      return const Center(child: Text('لا توجد طلبات سابقة', style: TextStyle(color: Colors.grey)));
+      return const Center(
+        child: Text('لا توجد طلبات سابقة', style: TextStyle(color: Colors.grey)),
+      );
     }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: appState.orders.length,
       itemBuilder: (context, index) {
         final order = appState.orders[index];
-        final arabicStatus = _getArabicStatus(order['status'] ?? '');
+        final status = order['status'] ?? '';
+        final arabicStatus = _getArabicStatus(status);
+
+        // تحديد رقم الخطوة الحالية لعرض مؤشر التقدم (Stepper)
+        int currentStep = 0;
+        if (status == 'waitingForPricing') currentStep = 1;
+        else if (status == 'pricingSentToCustomer') currentStep = 2;
+        else if (status == 'waitingCourierApproval' || status == 'onTheWay') currentStep = 3;
+        else if (status == 'arrived' || status == 'delivered') currentStep = 4;
 
         return Card(
           color: cardBg,
-          margin: const EdgeInsets.symmetric(vertical: 6),
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.amber.withOpacity(0.3)),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(14.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('طلب #${order['id']}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
-                    IconButton(
-                      icon: const Icon(Icons.chat, color: Colors.amber),
-                      tooltip: 'مراسلة الإدارة ودعم الطلب',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ChatScreen(
-                              orderId: order['id'].toString(),
-                              userRole: 'customer',
-                              targetChat: 'admin_customer',
-                            ),
-                          ),
-                        );
-                      },
+                    Text('طلب #${order['id']}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
+                    Row(
+                      children: [
+                        // زر مشاركة تفاصيل الفاتورة
+                        IconButton(
+                          icon: const Icon(Icons.share, color: Colors.amber, size: 20),
+                          tooltip: 'مشاركة الفاتورة',
+                          onPressed: () {
+                            final invoiceText = '⚡ فاتورة تطبيق FAST - تعز\n'
+                                'رقم الطلب: #${order['id']}\n'
+                                'المنتجات: ${order['items_description']}\n'
+                                'العنوان: ${order['address']}\n'
+                                'رسوم التوصيل: ${order['delivery_fee']} ر.ي\n'
+                                'الإجمالي: ${order['total_price']} ر.ي\n'
+                                'الحالة: $arabicStatus';
+                            Share.share(invoiceText);
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chat, color: Colors.amber),
+                          tooltip: 'مراسلة الإدارة ودعم الطلب',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatScreen(
+                                  orderId: order['id'].toString(),
+                                  userRole: 'customer',
+                                  targetChat: 'admin_customer',
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                Text('الحالة: $arabicStatus', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 5),
+                // مؤشر الخطوات المرئي المصغر داخل كارت الطلب
+                Row(
+                  children: [
+                    _buildStepIndicator(1, 'الطلب', currentStep >= 1),
+                    _buildStepLine(currentStep >= 2),
+                    _buildStepIndicator(2, 'التسعير', currentStep >= 2),
+                    _buildStepLine(currentStep >= 3),
+                    _buildStepIndicator(3, 'المندوب', currentStep >= 3),
+                    _buildStepLine(currentStep >= 4),
+                    _buildStepIndicator(4, 'التوصيل', currentStep >= 4),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text('الحالة: $arabicStatus', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 6),
                 Text('العنوان: ${order['address']}', style: TextStyle(color: textColor, fontSize: 13)),
                 Text('المنتجات: ${order['items_description']}', style: TextStyle(color: textColor, fontSize: 13)),
                 Text('سعر المنتجات: ${order['products_total']} ر.ي', style: TextStyle(color: textColor, fontSize: 13)),
                 Text('رسوم التوصيل: ${order['delivery_fee']} ر.ي', style: const TextStyle(color: Colors.greenAccent, fontSize: 13, fontWeight: FontWeight.bold)),
-                Text('الإجمالي الكلي: ${order['total_price']} ر.ي', style: const TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.bold)),
-                Text('المندوب: ${order['assigned_courier']}', style: TextStyle(color: textColor, fontSize: 13)),
+                const Divider(color: Colors.grey),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('الإجمالي الكلي:', style: TextStyle(color: textColor, fontSize: 13)),
+                    Text('${order['total_price']} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14)),
+                  ],
+                ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  // دوال مساعدة لرسم خطوات الطلب المرئية
+  Widget _buildStepIndicator(int stepNumber, String title, bool isCompleted) {
+    return Column(
+      children: [
+        Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isCompleted ? Colors.amber : Colors.grey[800],
+          ),
+          child: Center(
+            child: Text(
+              '$stepNumber',
+              style: TextStyle(color: isCompleted ? Colors.black : Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(title, style: TextStyle(color: isCompleted ? Colors.amber : Colors.grey, fontSize: 10)),
+      ],
+    );
+  }
+
+  Widget _buildStepLine(bool isActive) {
+    return Expanded(
+      child: Container(
+        height: 2,
+        color: isActive ? Colors.amber : Colors.grey[800],
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+      ),
     );
   }
 
