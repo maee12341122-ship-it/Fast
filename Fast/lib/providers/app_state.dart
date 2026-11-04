@@ -227,7 +227,6 @@ class AppState extends ChangeNotifier {
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
 
-  // توافقية مع ودجت `user` في القائمة الجانبية Drawer
   dynamic get user => userProfile == null ? null : _UserMock(userProfile!['name'] ?? '', userProfile!['phone'] ?? '');
 
   void _loadUserSession() async {
@@ -248,7 +247,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // 👈 فحص الرقم في قاعدة البيانات Supabase (إذا كان مسجلاً مسبقاً، يدخل مباشرة دون OTP)
+  // 👈 فحص الرقم في قاعدة البيانات Supabase (إذا كان مسجلاً مسبقاً، يرجع البيانات تلقائياً)[span_1](start_span)[span_1](end_span)
   Future<bool> checkAndLoginCustomer(String phone) async {
     try {
       String cleanPhone = _normalizePhone(phone);
@@ -276,9 +275,9 @@ class AppState extends ChangeNotifier {
         prefs.setString('userCity', currentCity);
 
         notifyListeners();
-        return true; // العميل موجود مسبقاً، تم تسجيل الدخول مباشرة دون الحاجة لـ OTP
+        return true; 
       }
-      return false; // الرقم جديد، يتطلب إرسال OTP
+      return false; 
     } catch (e) {
       debugPrint('❌ خطأ في فحص العميل: $e');
       return false;
@@ -532,7 +531,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- الطلبات والعزل التام والتحديث اللحظي الفوري ---
+  // --- الطلبات وعزلها وتحديثها بلحظية تامة ---
   List orders = [];
   List notifications = [];
 
@@ -573,7 +572,7 @@ class AppState extends ChangeNotifier {
 
       supabase.from('orders').stream(primaryKey: ['id']).listen((data) {
         orders = List.from(data);
-        notifyListeners(); // 👈 تحديث فوري ولحظي لكل شاشات التطبيق (مشرف، عميل، مندوب)
+        notifyListeners(); 
       }, onError: (error) {
         debugPrint('⚠️ خطأ في الاستماع للطلبات: $error');
       });
@@ -616,9 +615,15 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // 👈 قفل التسعير ومنع تعديلها إذا تم إرسالها مسبقاً
   Future<void> setOrderDeliveryFee(dynamic orderId, double fee, String courierName) async {
     try {
       final order = orders.firstWhere((o) => o['id'].toString() == orderId.toString(), orElse: () => null);
+      if (order != null && order['status'] != 'waitingForPricing' && order['status'] != 'pricingSentToCustomer') {
+        debugPrint('⚠️ الطلب مؤكد أو منتهي، لا يمكن تعديل تسعيره!');
+        return;
+      }
+
       double productsTotal = order != null ? double.tryParse(order['products_total'].toString()) ?? 0.0 : 0.0;
       double totalPrice = productsTotal + fee;
 
