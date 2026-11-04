@@ -105,7 +105,7 @@ class _AdminScreenState extends State<AdminScreen> {
 
   Widget _buildOrdersManagement(AppState appState) {
     if (appState.orders.isEmpty) {
-      return const Center(child: Text('لا توجد طلبات جديدة حالياً', style: TextStyle(color: Colors.grey, fontSize: 15)));
+      return const Center(child: Text('لا توجد طلبات جديدة حالياً 📦', style: TextStyle(color: Colors.grey, fontSize: 15)));
     }
 
     return ListView.builder(
@@ -118,6 +118,9 @@ class _AdminScreenState extends State<AdminScreen> {
         final arabicStatus = _getArabicStatus(rawStatus);
         final assignedCourier = order['assigned_courier']?.toString() ?? 'لم يتم التعيين';
 
+        // 👈 التحقق مما إذا كان الطلب قد تم تسعيره وتخطى مرحلة الانتظار لكي نقفل الحقول
+        final bool isLocked = rawStatus != 'waitingForPricing' && rawStatus != 'pricingSentToCustomer';
+
         if (!_feeControllers.containsKey(orderId)) {
           _feeControllers[orderId] = TextEditingController(text: order['delivery_fee']?.toString() ?? '0');
         }
@@ -128,7 +131,7 @@ class _AdminScreenState extends State<AdminScreen> {
           elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.amber.withOpacity(0.2), width: 1),
+            side: BorderSide(color: isLocked ? Colors.green.withOpacity(0.4) : Colors.amber.withOpacity(0.3), width: 1.5),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -142,11 +145,11 @@ class _AdminScreenState extends State<AdminScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.greenAccent.withOpacity(0.15),
+                        color: isLocked ? Colors.green.withOpacity(0.2) : Colors.amber.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.greenAccent.withOpacity(0.3)),
+                        border: Border.all(color: isLocked ? Colors.green : Colors.amber.withOpacity(0.3)),
                       ),
-                      child: Text(arabicStatus, style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                      child: Text(arabicStatus, style: TextStyle(color: isLocked ? Colors.greenAccent : Colors.amber, fontSize: 11, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -162,7 +165,6 @@ class _AdminScreenState extends State<AdminScreen> {
                 Text('🛵 المندوب الحالي: $assignedCourier', style: const TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
 
-                // --- أزرار الشات المعزولة للمشرف ---
                 Row(
                   children: [
                     Expanded(
@@ -216,19 +218,21 @@ class _AdminScreenState extends State<AdminScreen> {
                 ),
                 const SizedBox(height: 14),
 
+                // 👈 قفل الحقول إذا كان الطلب مقفلاً (تم تأكيده ولم يعد بانتظار التسعير)
                 Row(
                   children: [
                     Expanded(
                       child: TextField(
                         controller: _feeControllers[orderId],
                         keyboardType: TextInputType.number,
+                        enabled: !isLocked,
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'رسوم التوصيل (ر.ي)',
-                          labelStyle: TextStyle(color: Colors.grey),
+                        decoration: InputDecoration(
+                          labelText: isLocked ? 'رسوم التوصيل (مقفل 🔒)' : 'رسوم التوصيل (ر.ي)',
+                          labelStyle: const TextStyle(color: Colors.grey),
                           filled: true,
-                          fillColor: Color(0xFF121212),
-                          border: OutlineInputBorder(),
+                          fillColor: const Color(0xFF121212),
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                     ),
@@ -237,12 +241,12 @@ class _AdminScreenState extends State<AdminScreen> {
                       child: DropdownButtonFormField<String>(
                         dropdownColor: const Color(0xFF1E1E1E),
                         style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'اختر المندوب',
-                          labelStyle: TextStyle(color: Colors.grey),
+                        decoration: InputDecoration(
+                          labelText: isLocked ? 'المندوب (مقفل 🔒)' : 'اختر المندوب',
+                          labelStyle: const TextStyle(color: Colors.grey),
                           filled: true,
-                          fillColor: Color(0xFF121212),
-                          border: OutlineInputBorder(),
+                          fillColor: const Color(0xFF121212),
+                          border: const OutlineInputBorder(),
                         ),
                         value: appState.couriers.any((c) => c['name'] == order['assigned_courier'])
                             ? order['assigned_courier']
@@ -253,7 +257,7 @@ class _AdminScreenState extends State<AdminScreen> {
                             child: Text(courier['name'].toString(), style: const TextStyle(color: Colors.white)),
                           );
                         }).toList(),
-                        onChanged: (val) {
+                        onChanged: isLocked ? null : (val) {
                           setState(() {
                             order['assigned_courier'] = val;
                           });
@@ -265,11 +269,11 @@ class _AdminScreenState extends State<AdminScreen> {
                 const SizedBox(height: 12),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
+                    backgroundColor: isLocked ? Colors.grey[800] : Colors.amber,
                     minimumSize: const Size(double.infinity, 44),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: () {
+                  onPressed: isLocked ? null : () {
                     final fee = double.tryParse(_feeControllers[orderId]?.text ?? '0') ?? 0.0;
                     final courierName = order['assigned_courier'] ?? 'لم يتم التعيين';
                     if (courierName == 'لم يتم التعيين') {
@@ -279,7 +283,10 @@ class _AdminScreenState extends State<AdminScreen> {
                     appState.setOrderDeliveryFee(orderId, fee, courierName);
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديد الرسوم وإسناد الطلب بنجاح! ✅')));
                   },
-                  child: const Text('إرسال التسعيرة وإسناد الطلب للمندوب', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    isLocked ? 'الطلب مؤكد ومقفل 🔒' : 'إرسال التسعيرة وإسناد الطلب للمندوب 🚀', 
+                    style: TextStyle(color: isLocked ? Colors.grey : Colors.black, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
