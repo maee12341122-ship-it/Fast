@@ -153,8 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  void _checkAndShowPricingDialog(BuildContext context, AppState appState, Color cardBg, Color textColor) {
+    void _checkAndShowPricingDialog(BuildContext context, AppState appState, Color cardBg, Color textColor) {
     if (appState.userProfile == null || appState.isAdminLoggedIn) return;
 
     final customerPhone = appState.userProfile!['phone'];
@@ -294,59 +293,57 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: Text('تسجيل دخول المشرف الآمن', style: TextStyle(color: textColor, fontSize: 14)),
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
-                          actions: [
-  TextButton(
-    onPressed: () => Navigator.pop(context),
-    child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
-  ),
-  ElevatedButton(
-    style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
-    onPressed: () async {
-      // تنظيف المدخلات من أي مسافات زائدة قد تم إدخالها بالخطأ من لوحة المفاتيح
-      String username = usernameController.text.trim();
-      String password = passwordController.text.trim();
+                          children: [
+                            TextField(
+                              controller: usernameController,
+                              style: TextStyle(color: textColor, fontSize: 14),
+                              decoration: const InputDecoration(
+                                labelText: 'اسم المستخدم',
+                                labelStyle: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: passwordController,
+                              obscureText: true,
+                              style: TextStyle(color: textColor, fontSize: 14),
+                              decoration: const InputDecoration(
+                                labelText: 'كلمة المرور',
+                                labelStyle: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+                            onPressed: () async {
+                              String username = usernameController.text.trim();
+                              String password = passwordController.text.trim();
 
-      bool loginSuccess = await appState.loginAdminFromSupabase(username, password);
-      
-      // إغلاق النافذة المنبثقة أولاً
-      if (context.mounted) Navigator.pop(context);
+                              bool loginSuccess = await appState.loginAdminFromSupabase(username, password);
 
-      if (loginSuccess) {
-        if (context.mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AdminScreen()),
-          );
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('مرحباً بك، تم تسجيل دخول المشرف بنجاح! 🚀')),
-          );
-        }
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('اسم المستخدم أو كلمة المرور غير صحيحة! ❌')),
-          );
-        }
-      }
-    },
-    child: const Text('دخول', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-  ),
-],
-       
+                              if (!context.mounted) return;
                               Navigator.pop(context);
 
                               if (loginSuccess) {
+                                if (!context.mounted) return;
                                 Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminScreen()));
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('مرحباً بك، تم تسجيل دخول المشرف بنجاح! 🚀')),
                                 );
                               } else {
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('اسم المستخدم أو كلمة المرور غير صحيحة! ❌')),
                                 );
                               }
                             },
-                            child: const Text('دخول', style: TextStyle(color: Colors.amber)),
+                            child: const Text('دخول', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
@@ -356,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          body: IndexedStack(
+                    body: IndexedStack(
             index: _currentIndex,
             children: pages,
           ),
@@ -419,7 +416,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-    Widget _buildShopTab(AppState appState, Color cardBg, Color textColor) {
+
+  Widget _buildShopTab(AppState appState, Color cardBg, Color textColor) {
     if (selectedCategory == 'طلبات أخرى') {
       return Padding(
         padding: const EdgeInsets.all(16.0),
@@ -506,8 +504,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-
-    final searchQuery = _searchController.text.trim().toLowerCase();
+        final searchQuery = _searchController.text.trim().toLowerCase();
     final filteredProducts = (appState.products as List).map((e) => e as ProductModel).where((p) {
       final matchesCategory = selectedCategory == 'الكل' || p.category == selectedCategory;
       final matchesSearch = searchQuery.isEmpty ||
@@ -848,267 +845,263 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 5),
                 Row(
                   children: [
-                              _buildStepIndicator(1, 'الطلب', currentStep >= 1),
-          _buildStepLine(currentStep >= 2),
-          _buildStepIndicator(2, 'التسعير', currentStep >= 2),
-          _buildStepLine(currentStep >= 3),
-          _buildStepIndicator(3, 'المندوب', currentStep >= 3),
-          _buildStepLine(currentStep >= 4),
-          _buildStepIndicator(4, 'التوصيل', currentStep >= 4),
-        ],
-      ),
-      const SizedBox(height: 12),
-      Text('الحالة: $arabicStatus', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13)),
-      const SizedBox(height: 6),
-      Text('العنوان: ${order['address']}', style: TextStyle(color: textColor, fontSize: 13)),
-      Text('المنتجات: ${order['items_description']}', style: TextStyle(color: textColor, fontSize: 13)),
-      Text('سعر المنتجات: ${order['products_total']} ر.ي', style: TextStyle(color: textColor, fontSize: 13)),
-      Text('رسوم التوصيل: ${order['delivery_fee']} ر.ي', style: const TextStyle(color: Colors.greenAccent, fontSize: 13, fontWeight: FontWeight.bold)),
-      const Divider(color: Colors.grey),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text('الإجمالي الكلي:', style: TextStyle(color: textColor, fontSize: 13)),
-          Text('${order['total_price']} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14)),
-        ],
-      ),
-      if (status == 'delivered' || status == 'arrived') ...[
-        const SizedBox(height: 12),
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.amber.withOpacity(0.2),
-            foregroundColor: Colors.amber,
-            minimumSize: const Size(double.infinity, 38),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: const BorderSide(color: Colors.amber),
-            ),
-          ),
-          onPressed: () {
-            _showRatingDialog(context, appState, order['id'].toString(), cardBg, textColor);
-          },
-          icon: const Icon(Icons.star, size: 18),
-          label: const Text('قيم المندوب وخدمة التوصيل ⭐', style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
-      ],
-    ],
-  ),
-),
-);
-},
-);
-}
-
-Widget _buildStepIndicator(int stepNumber, String title, bool isCompleted) {
-  return Column(
-    children: [
-      Container(
-        width: 26,
-        height: 26,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isCompleted ? Colors.amber : Colors.grey[800],
-        ),
-        child: Center(
-          child: Text(
-            '$stepNumber',
-            style: TextStyle(color: isCompleted ? Colors.black : Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-      const SizedBox(height: 4),
-      Text(title, style: TextStyle(color: isCompleted ? Colors.amber : Colors.grey, fontSize: 10)),
-    ],
-  );
-}
-
-Widget _buildStepLine(bool isActive) {
-  return Expanded(
-    child: Container(
-      height: 2,
-      color: isActive ? Colors.amber : Colors.grey[800],
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-    ),
-  );
-}
-
-Widget _buildProfileTab(AppState appState, Color cardBg, Color textColor) {
-  final profile = appState.userProfile;
-
-  return ListView(
-    padding: const EdgeInsets.all(16.0),
-    children: [
-      Center(
-        child: Text('حسابي الشخصي', style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
-      ),
-      const SizedBox(height: 20),
-      profile == null
-          ? Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.amber.withOpacity(0.3)),
-        ),
-        child: Column(
-          children: [
-            const Icon(Icons.person, size: 50, color: Colors.amber),
-            const SizedBox(height: 10),
-            Text('أنت لست مسجل دخول!', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 5),
-            const Text('سجل دخولك برقم هاتفك للاستمتاع بتجربة التوصيل الأسرع في تعز.', style: TextStyle(color: Colors.grey, fontSize: 12), textAlign: TextAlign.center),
-            const SizedBox(height: 15),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                minimumSize: const Size(double.infinity, 45),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const PhoneAuthScreen()),
-                );
-              },
-              child: const Text('تسجيل الدخول برقم الهاتف', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      )
-          : Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.amber.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            const CircleAvatar(
-              backgroundColor: Colors.amber,
-              child: Icon(Icons.person, color: Colors.black),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(profile['name'] ?? 'عميل FAST', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 3),
-                  Text('📞 ${profile['phone']} | 📍 تعز', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                  if (profile['address'] != null && profile['address'].toString().isNotEmpty)
-                    Text('🏠 العنوان: ${profile['address']}', style: const TextStyle(color: Colors.amber, fontSize: 12)),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () => appState.logoutUser(),
-              child: const Text('خروج', style: TextStyle(color: Colors.redAccent)),
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 20),
-
-      _buildProfileItem(Icons.dark_mode, 'مظهر التطبيق (${appState.isDarkMode ? "الوضع الداكن" : "الوضع الفاتح"})', cardBg, textColor, () {
-        appState.toggleTheme();
-      }),
-      _buildProfileItem(Icons.location_city, 'المدينة (تعز - اليمن - حصرياً)', cardBg, textColor, () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تطبيق FAST مخصص لخدمة مدينة تعز بكل سرعة 🌟')),
-        );
-      }),
-      _buildProfileItem(Icons.bookmark_added, 'عناويني ومواقع التوصيل المحفوظة', cardBg, textColor, () {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: cardBg,
-            title: Text('العناوين المحفوظة', style: TextStyle(color: textColor)),
-            content: Text(
-              profile != null && profile['address'] != null && profile['address'].toString().isNotEmpty
-                  ? 'العنوان النشط حالياً:\n${profile['address']}'
-                  : 'لم تقم بحفظ عناوين إضافية بعد.',
-              style: const TextStyle(color: Colors.grey),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسناً', style: TextStyle(color: Colors.amber)))
-            ],
-          ),
-        );
-      }),
-      _buildProfileItem(Icons.local_offer, 'العروض والخصومات الخاصة', cardBg, textColor, () {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: cardBg,
-            title: Text('العروض الترويجية', style: TextStyle(color: textColor)),
-            content: const Text('ترقبوا أقوى خصومات التوصيل ومجانيات المطاعم قريباً في تعز مع FAST! 🎁', style: TextStyle(color: Colors.grey)),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق', style: TextStyle(color: Colors.amber)))
-            ],
-          ),
-        );
-      }),
-      _buildProfileItem(Icons.share, 'مشاركة التطبيق مع الأصدقاء', cardBg, textColor, () {
-        appState.shareApp();
-      }),
-      _buildProfileItem(Icons.help_outline, 'مركز المساعدة والأسئلة الشائعة', cardBg, textColor, () {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: cardBg,
-            title: Text('كيف نعمل؟', style: TextStyle(color: textColor)),
-            content: const Text(
-              '1. تختار منتجاتك أو تطلب طلباً خاصاً.\n2. تحدد الإدارة سعر التوصيل.\n3. توافق على التسعير ليذهب الطلب للمندوب.\n4. يستلم طلبك حتى باب منزلك بكل سرعة!',
-              style: TextStyle(color: Colors.grey),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('فهمت', style: TextStyle(color: Colors.amber)))
-            ],
-          ),
-        );
-      }),
-      _buildProfileItem(Icons.phone, 'اتصل بخدمة العملاء والدعم', cardBg, textColor, () {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: cardBg,
-            title: Text('خدمة العملاء', style: TextStyle(color: textColor)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.phone, color: Colors.green),
-                  title: Text('رقم الدعم الفني: ${appState.customerSupportPhone}', style: TextStyle(color: textColor)),
+                    _buildStepIndicator(1, 'الطلب', currentStep >= 1),
+                    _buildStepLine(currentStep >= 2),
+                    _buildStepIndicator(2, 'التسعير', currentStep >= 2),
+                    _buildStepLine(currentStep >= 3),
+                    _buildStepIndicator(3, 'المندوب', currentStep >= 3),
+                    _buildStepLine(currentStep >= 4),
+                    _buildStepIndicator(4, 'التوصيل', currentStep >= 4),
+                  ],
                 ),
+                const SizedBox(height: 12),
+                Text('الحالة: $arabicStatus', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 6),
+                Text('العنوان: ${order['address']}', style: TextStyle(color: textColor, fontSize: 13)),
+                Text('المنتجات: ${order['items_description']}', style: TextStyle(color: textColor, fontSize: 13)),
+                Text('سعر المنتجات: ${order['products_total']} ر.ي', style: TextStyle(color: textColor, fontSize: 13)),
+                Text('رسوم التوصيل: ${order['delivery_fee']} ر.ي', style: const TextStyle(color: Colors.greenAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                const Divider(color: Colors.grey),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('الإجمالي الكلي:', style: TextStyle(color: textColor, fontSize: 13)),
+                    Text('${order['total_price']} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14)),
+                  ],
+                ),
+                if (status == 'delivered' || status == 'arrived') ...[
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber.withOpacity(0.2),
+                      foregroundColor: Colors.amber,
+                      minimumSize: const Size(double.infinity, 38),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: const BorderSide(color: Colors.amber),
+                      ),
+                    ),
+                    onPressed: () {
+                      _showRatingDialog(context, appState, order['id'].toString(), cardBg, textColor);
+                    },
+                    icon: const Icon(Icons.star, size: 18),
+                    label: const Text('قيم المندوب وخدمة التوصيل ⭐', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ],
             ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق', style: TextStyle(color: Colors.amber)))
-            ],
           ),
         );
-      }),
-    ],
-  );
-}
+      },
+    );
+  }
+    Widget _buildStepIndicator(int stepNumber, String title, bool isCompleted) {
+    return Column(
+      children: [
+        Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isCompleted ? Colors.amber : Colors.grey[800],
+          ),
+          child: Center(
+            child: Text(
+              '$stepNumber',
+              style: TextStyle(color: isCompleted ? Colors.black : Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(title, style: TextStyle(color: isCompleted ? Colors.amber : Colors.grey, fontSize: 10)),
+      ],
+    );
+  }
 
-Widget _buildProfileItem(IconData icon, String title, Color cardBg, Color textColor, VoidCallback onTap) {
-  return Container(
-    margin: const EdgeInsets.symmetric(vertical: 6),
-    decoration: BoxDecoration(
-      color: cardBg,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: ListTile(
-      leading: Icon(icon, color: Colors.amber),
-      title: Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-      onTap: onTap,
-    ),
-  );
-}
-}
+  Widget _buildStepLine(bool isActive) {
+    return Expanded(
+      child: Container(
+        height: 2,
+        color: isActive ? Colors.amber : Colors.grey[800],
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+      ),
+    );
+  }
 
+  Widget _buildProfileTab(AppState appState, Color cardBg, Color textColor) {
+    final profile = appState.userProfile;
 
-  
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        Center(
+          child: Text('حسابي الشخصي', style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 20),
+        profile == null
+            ? Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.person, size: 50, color: Colors.amber),
+                    const SizedBox(height: 10),
+                    Text('أنت لست مسجل دخول!', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 5),
+                    const Text('سجل دخولك برقم هاتفك للاستمتاع بتجربة التوصيل الأسرع في تعز.', style: TextStyle(color: Colors.grey, fontSize: 12), textAlign: TextAlign.center),
+                    const SizedBox(height: 15),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        minimumSize: const Size(double.infinity, 45),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const PhoneAuthScreen()),
+                        );
+                      },
+                      child: const Text('تسجيل الدخول برقم الهاتف', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              )
+            : Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: Colors.amber,
+                      child: Icon(Icons.person, color: Colors.black),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(profile['name'] ?? 'عميل FAST', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                          const SizedBox(height: 3),
+                          Text('📞 ${profile['phone']} | 📍 تعز', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          if (profile['address'] != null && profile['address'].toString().isNotEmpty)
+                            Text('🏠 العنوان: ${profile['address']}', style: const TextStyle(color: Colors.amber, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => appState.logoutUser(),
+                      child: const Text('خروج', style: TextStyle(color: Colors.redAccent)),
+                    ),
+                  ],
+                ),
+              ),
+        const SizedBox(height: 20),
+
+        _buildProfileItem(Icons.dark_mode, 'مظهر التطبيق (${appState.isDarkMode ? "الوضع الداكن" : "الوضع الفاتح"})', cardBg, textColor, () {
+          appState.toggleTheme();
+        }),
+        _buildProfileItem(Icons.location_city, 'المدينة (تعز - اليمن - حصرياً)', cardBg, textColor, () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تطبيق FAST مخصص لخدمة مدينة تعز بكل سرعة 🌟')),
+          );
+        }),
+        _buildProfileItem(Icons.bookmark_added, 'عناويني ومواقع التوصيل المحفوظة', cardBg, textColor, () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: cardBg,
+              title: Text('العناوين المحفوظة', style: TextStyle(color: textColor)),
+              content: Text(
+                profile != null && profile['address'] != null && profile['address'].toString().isNotEmpty
+                    ? 'العنوان النشط حالياً:\n${profile['address']}'
+                    : 'لم تقم بحفظ عناوين إضافية بعد.',
+                style: const TextStyle(color: Colors.grey),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسناً', style: TextStyle(color: Colors.amber)))
+              ],
+            ),
+          );
+        }),
+        _buildProfileItem(Icons.local_offer, 'العروض والخصومات الخاصة', cardBg, textColor, () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: cardBg,
+              title: Text('العروض الترويجية', style: TextStyle(color: textColor)),
+              content: const Text('ترقبوا أقوى خصومات التوصيل ومجانيات المطاعم قريباً في تعز مع FAST! 🎁', style: TextStyle(color: Colors.grey)),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق', style: TextStyle(color: Colors.amber)))
+              ],
+            ),
+          );
+        }),
+        _buildProfileItem(Icons.share, 'مشاركة التطبيق مع الأصدقاء', cardBg, textColor, () {
+          appState.shareApp();
+        }),
+        _buildProfileItem(Icons.help_outline, 'مركز المساعدة والأسئلة الشائعة', cardBg, textColor, () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: cardBg,
+              title: Text('كيف نعمل؟', style: TextStyle(color: textColor)),
+              content: const Text(
+                '1. تختار منتجاتك أو تطلب طلباً خاصاً.\n2. تحدد الإدارة سعر التوصيل.\n3. توافق على التسعير ليذهب الطلب للمندوب.\n4. يستلم طلبك حتى باب منزلك بكل سرعة!',
+                style: TextStyle(color: Colors.grey),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('فهمت', style: TextStyle(color: Colors.amber)))
+              ],
+            ),
+          );
+        }),
+        _buildProfileItem(Icons.phone, 'اتصل بخدمة العملاء والدعم', cardBg, textColor, () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: cardBg,
+              title: Text('خدمة العملاء', style: TextStyle(color: textColor)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.phone, color: Colors.green),
+                    title: Text('رقم الدعم الفني: ${appState.customerSupportPhone}', style: TextStyle(color: textColor)),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق', style: TextStyle(color: Colors.amber)))
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildProfileItem(IconData icon, String title, Color cardBg, Color textColor, VoidCallback onTap) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.amber),
+        title: Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        onTap: onTap,
+      ),
+    );
+  }
+}
