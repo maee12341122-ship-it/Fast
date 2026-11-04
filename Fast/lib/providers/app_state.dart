@@ -168,36 +168,38 @@ class AppState extends ChangeNotifier {
 
   // --- جلسة المشرف (آمنة عبر قاعدة بيانات Supabase) ---
   bool isAdminLoggedIn = false;
-
-  void _loadAdminSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    isAdminLoggedIn = prefs.getBool('isAdminLoggedIn') ?? false;
-    notifyListeners();
-  }
-
-  // دالة التحقق من تسجيل دخول المشرف عبر جدول admins في Supabase مع تنظيف المسافات
-    Future<bool> loginAdminFromSupabase(String username, String password) async {
+  // دالة التحقق من تسجيل دخول المشرف بمرونة عالية وحماية كاملة ضد أخطاء الإدخال
+  Future<bool> loginAdminFromSupabase(String username, String password) async {
     try {
-      final response = await supabase
-          .from('admins')
-          .select()
-          .eq('username', username.trim())
-          .maybeSingle();
+      debugPrint('🔍 محاولة تسجيل الدخول للمشرف: [${username.trim()}]');
 
-      if (response != null) {
-        String dbPassword = response['password_hash']?.toString() ?? '';
-        
-        if (password.trim() == dbPassword.trim()) {
-          isAdminLoggedIn = true;
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isAdminLoggedIn', true);
-          notifyListeners();
-          return true;
+      // جلب جميع المشرفين من الجدول لضمان المقارنة المرنة
+      final response = await supabase.from('admins').select();
+      
+      if (response != null && response is List) {
+        for (var admin in response) {
+          String dbUsername = admin['username']?.toString().trim() ?? '';
+          String dbPassword = admin['password_hash']?.toString().trim() ?? '';
+
+          // مقارنة اسم المستخدم متجاهلة حالة الحروف الكبيرة والصغيرة (Case-insensitive)
+          if (dbUsername.toLowerCase() == username.trim().toLowerCase()) {
+            if (dbPassword == password.trim()) {
+              isAdminLoggedIn = true;
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('isAdminLoggedIn', true);
+              notifyListeners();
+              debugPrint('✅ تم تسجيل دخول المشرف بنجاح!');
+              return true;
+            } else {
+              debugPrint('❌ اسم المستخدم صحيح، ولكن كلمة المرور غير مطابقة!');
+            }
+          }
         }
       }
+      debugPrint('❌ لم يتم العثور على اسم المستخدم في قاعدة البيانات!');
       return false;
     } catch (e) {
-      debugPrint('❌ خطأ في الاتصال بقاعدة البيانات: $e');
+      debugPrint('❌ خطأ استثنائي في الاتصال بقاعدة البيانات للتحقق من المشرف: $e');
       return false;
     }
   }
