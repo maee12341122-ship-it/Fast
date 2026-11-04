@@ -11,14 +11,16 @@ class OrdersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final orders = context.watch<AppState>().orders;
+    // 👈 استخدام customerOrders لعزل طلبيات العميل الحالي برقم هاتفه فقط
+    final orders = context.watch<AppState>().customerOrders;
+    
     return Scaffold(
       appBar: AppBar(
         leading: onOpenDrawer == null ? null : IconButton(icon: const Icon(Icons.menu), onPressed: onOpenDrawer),
         title: const Text('طلباتي'),
       ),
       body: orders.isEmpty
-          ? const EmptyState(message: 'لا توجد طلبات محفوظة حتى الآن', icon: Icons.receipt_long_outlined)
+          ? const EmptyState(message: 'لا توجد طلبات محفوظة خاصة بك حتى الآن', icon: Icons.receipt_long_outlined)
           : ListView.builder(
               padding: const EdgeInsets.all(10),
               itemCount: orders.length,
