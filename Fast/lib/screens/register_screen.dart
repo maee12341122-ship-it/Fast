@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/address_model.dart';
 import '../providers/app_state.dart';
+import '../utils/constants.dart';
 import '../utils/validators.dart';
 import 'location_picker_screen.dart';
 import 'main_shell.dart';
@@ -84,11 +85,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // دالة مجانية لإرسال الرمز مباشرة عبر الواتساب لرقم العميل
   Future<void> _sendOtpViaWhatsApp(String phone, String otpCode) async {
     final message = Uri.encodeComponent(
-        '🌟 تطبيق تعز إكسبريس (Taiz Express) 🌟\n\n'
-            'أهلاً بك!\n'
+        '🌟 تطبيق FAST - تعز 🌟\n\n'
+            'أهلاً بك يا بطل!\n'
             'رمز التحقق الخاص بك هو: *$otpCode*\n\n'
             'لا تشارك هذا الرمز مع أي شخص حفاظاً على أمان حسابك. 🚀'
     );
@@ -113,7 +113,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // طلب توليد الرمز وفتح الواتساب مجاناً
   Future<void> _requestAndSendOtp() async {
     if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return;
@@ -123,10 +122,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final appState = context.read<AppState>();
     final phone = _phoneController.text.trim();
 
-    // 1. توليد الرمز
     appState.requestOtpForPhone(phone);
 
-    // 2. إرسال الرسالة عبر رابط الواتساب المجاني
     if (appState.generatedDynamicOtp != null) {
       await _sendOtpViaWhatsApp(phone, appState.generatedDynamicOtp!);
     }
@@ -146,7 +143,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // التحقق والدخول
   void _verifyAndSubmit() {
     final appState = context.read<AppState>();
     final enteredOtp = _otpController.text.trim();
@@ -188,7 +184,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const MainShell()),
-              (route) => false,
+          (route) => false,
         );
       }
     } catch (e) {
@@ -204,181 +200,228 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('تسجيل بيانات العميل والتحقق'),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'أدخل بياناتك ورقم هاتفك ليصلك رمز التوثيق عبر الواتساب',
-                style: TextStyle(color: Colors.grey),
-                textAlign: TextAlign.start,
-              ),
-              const SizedBox(height: 20),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF121212),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF1E1E1E),
+          elevation: 2,
+          title: const Text('تسجيل بيانات العميل والتحقق', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16)),
+          centerTitle: true,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.verified_user_outlined, color: AppConstants.gold, size: 24),
+                    SizedBox(width: 8),
+                    Text('مرحباً بك في تطبيق FAST', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'أدخل بياناتك ورقم هاتفك ليصلك رمز التوثيق عبر الواتساب فوراً',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+                const SizedBox(height: 24),
 
-              TextFormField(
-                controller: _nameController,
-                enabled: !_isOtpSent,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'الاسم الكامل',
-                  prefixIcon: Icon(Icons.person),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  final required = Validators.requiredText(value, message: 'يرجى إدخال الاسم');
-                  if (required != null) return required;
-                  if (value!.trim().length < 2) return 'الاسم قصير جداً';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 14),
-
-              TextFormField(
-                controller: _phoneController,
-                enabled: !_isOtpSent,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'رقم الهاتف اليمني (واتساب)',
-                  prefixIcon: Icon(Icons.phone),
-                  border: OutlineInputBorder(),
-                ),
-                validator: Validators.yemeniPhone,
-              ),
-              const SizedBox(height: 14),
-
-              DropdownButtonFormField<String>(
-                value: _selectedArea,
-                decoration: const InputDecoration(
-                  labelText: 'المنطقة في تعز',
-                  prefixIcon: Icon(Icons.location_city),
-                  border: OutlineInputBorder(),
-                ),
-                items: _areas
-                    .map((area) => DropdownMenuItem(value: area, child: Text(area)))
-                    .toList(),
-                onChanged: _isOtpSent ? null : (value) {
-                  if (value != null) {
-                    setState(() => _selectedArea = value);
-                  }
-                },
-              ),
-              const SizedBox(height: 14),
-
-              TextFormField(
-                controller: _addressController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'عنوان البيت / المحل التفصيلي',
-                  prefixIcon: Icon(Icons.home),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) =>
-                    Validators.requiredText(value, message: 'يرجى كتابة العنوان التفصيلي'),
-              ),
-              const SizedBox(height: 14),
-
-              OutlinedButton.icon(
-                onPressed: _chooseLocation,
-                icon: const Icon(Icons.map_outlined),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                label: Text(
-                  _selectedPoint == null
-                      ? 'تحديد الموقع على الخريطة (اختياري)'
-                      : 'تم اختيار موقع على الخريطة ✓',
-                ),
-              ),
-              if (_selectedPoint != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    'الإحداثيات: ${_selectedPoint!.latitude.toStringAsFixed(5)}, ${_selectedPoint!.longitude.toStringAsFixed(5)}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    textAlign: TextAlign.center,
+                TextFormField(
+                  controller: _nameController,
+                  enabled: !_isOtpSent,
+                  textInputAction: TextInputAction.next,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'الاسم الكامل',
+                    labelStyle: TextStyle(color: Colors.grey),
+                    prefixIcon: Icon(Icons.person, color: AppConstants.gold),
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Color(0xFF1E1E1E),
                   ),
+                  validator: (value) {
+                    final required = Validators.requiredText(value, message: 'يرجى إدخال الاسم');
+                    if (required != null) return required;
+                    if (value!.trim().length < 2) return 'الاسم قصير جداً';
+                    return null;
+                  },
                 ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 14),
 
-              if (!_isOtpSent) ...[
-                SizedBox(
-                  height: 50,
-                  child: FilledButton(
-                    onPressed: _isLoading ? null : _requestAndSendOtp,
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                      'إرسال رمز التحقق عبر الواتساب 📩',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
+                TextFormField(
+                  controller: _phoneController,
+                  enabled: !_isOtpSent,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'رقم الهاتف اليمني (واتساب)',
+                    labelStyle: TextStyle(color: Colors.grey),
+                    prefixIcon: Icon(Icons.phone, color: AppConstants.gold),
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Color(0xFF1E1E1E),
                   ),
+                  validator: Validators.yemeniPhone,
                 ),
-              ] else ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green),
+                const SizedBox(height: 14),
+
+                DropdownButtonFormField<String>(
+                  value: _selectedArea,
+                  dropdownColor: const Color(0xFF1E1E1E),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'المنطقة في تعز',
+                    labelStyle: TextStyle(color: Colors.grey),
+                    prefixIcon: Icon(Icons.location_city, color: AppConstants.gold),
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Color(0xFF1E1E1E),
                   ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'تم تجهيز رمز التحقق (OTP) في الواتساب. أدخله أدناه للمتابعة:',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _otpController,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 22, letterSpacing: 8, fontWeight: FontWeight.bold),
-                        decoration: const InputDecoration(
-                          hintText: '------',
-                          border: OutlineInputBorder(),
-                          counterText: '',
-                        ),
-                      ),
-                    ],
+                  items: _areas
+                      .map((area) => DropdownMenuItem(value: area, child: Text(area, style: const TextStyle(color: Colors.white))))
+                      .toList(),
+                  onChanged: _isOtpSent ? null : (value) {
+                    if (value != null) {
+                      setState(() => _selectedArea = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                TextFormField(
+                  controller: _addressController,
+                  maxLines: 2,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'عنوان البيت / المحل التفصيلي',
+                    labelStyle: TextStyle(color: Colors.grey),
+                    prefixIcon: Icon(Icons.home, color: AppConstants.gold),
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Color(0xFF1E1E1E),
+                    alignLabelWithHint: true,
                   ),
+                  validator: (value) =>
+                      Validators.requiredText(value, message: 'يرجى كتابة العنوان التفصيلي'),
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  height: 50,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(backgroundColor: Colors.green),
-                    onPressed: _verifyAndSubmit,
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text(
-                      'تحقق ودخول للتطبيق 🚀',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
+
+                OutlinedButton.icon(
+                  onPressed: _chooseLocation,
+                  icon: const Icon(Icons.map_outlined, color: AppConstants.gold),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppConstants.gold,
+                    side: BorderSide(color: AppConstants.gold.withOpacity(0.5)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  label: Text(
+                    _selectedPoint == null
+                        ? 'تحديد الموقع على الخريطة (اختياري) 🗺️'
+                        : 'تم اختيار موقع على الخريطة ✓',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                const SizedBox(height: 10),
-                TextButton(
-                  onPressed: () => setState(() => _isOtpSent = false),
-                  child: const Text('تغيير رقم الهاتف أو إعادة الإرسال'),
+                if (_selectedPoint != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'الإحداثيات: ${_selectedPoint!.latitude.toStringAsFixed(5)}, ${_selectedPoint!.longitude.toStringAsFixed(5)}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                const SizedBox(height: 24),
+
+                if (!_isOtpSent) ...[
+                  SizedBox(
+                    height: 50,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppConstants.gold,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: _isLoading ? null : _requestAndSendOtp,
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.black)
+                          : const Text(
+                              'إرسال رمز التحقق عبر الواتساب 📩',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                    ),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1E1E),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.green.withOpacity(0.5)),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'تم تجهيز رمز التحقق (OTP) في الواتساب. أدخله أدناه للمتابعة:',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _otpController,
+                          keyboardType: TextInputType.number,
+                          maxLength: 6,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white, fontSize: 22, letterSpacing: 8, fontWeight: FontWeight.bold),
+                          decoration: const InputDecoration(
+                            hintText: '------',
+                            hintStyle: TextStyle(color: Colors.grey),
+                            border: OutlineInputBorder(),
+                            filled: true,
+                            fillColor: Color(0xFF121212),
+                            counterText: '',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    height: 50,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.green, 
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: _verifyAndSubmit,
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text(
+                        'تحقق ودخول للتطبيق 🚀',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => setState(() => _isOtpSent = false),
+                    child: const Text('تغيير رقم الهاتف أو إعادة الإرسال', style: TextStyle(color: AppConstants.gold)),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                const Text(
+                  'ملاحظة: خدمة إرسال الرمز مجانية وتعمل بالربط المباشر مع الواتساب لضمان الوصول السريع.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey, fontSize: 11, height: 1.5),
                 ),
               ],
-              const SizedBox(height: 12),
-              const Text(
-                'ملاحظة: خدمة إرسال الرمز مجانية وتعمل بالربط المباشر مع الواتساب لضمان الوصول السريع.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 11),
-              ),
-            ],
+            ),
           ),
         ),
       ),
