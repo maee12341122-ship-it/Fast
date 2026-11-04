@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
+import '../services/notification_service.dart';
 
 class AppState extends ChangeNotifier {
   final supabase = Supabase.instance.client;
@@ -45,7 +46,6 @@ class AppState extends ChangeNotifier {
   // --- إدارة رسائل الشات المباشر مع Supabase ---
   List chatMessages = [];
 
-  // جلب وتتبع رسائل الطلب لحظياً من جدول messages
   Stream<List>> getOrderChatStream(dynamic orderId) {
     return supabase
         .from('messages')
@@ -54,7 +54,6 @@ class AppState extends ChangeNotifier {
         .order('created_at', ascending: true);
   }
 
-  // إرسال رسالة شات جديدة وحفظها في Supabase
   Future<void> sendChatMessage(dynamic orderId, String senderRole, String senderId, String messageText) async {
     if (messageText.trim().isEmpty) return;
 
@@ -509,12 +508,13 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- الطلبات والتحديثات اللحظية والتنبيهات ---
+  // --- الطلبات والتحديثات اللحظية والتنبيهات الحقيقية ---
   List orders = [];
   List notifications = [];
 
   void addNotification(String title, String body) {
     notifications.insert(0, {'title': title, 'body': body, 'time': DateTime.now()});
+    NotificationService.showLocalNotification(title, body);
     notifyListeners();
   }
 
@@ -526,8 +526,17 @@ class AppState extends ChangeNotifier {
 
       supabase.from('orders').stream(primaryKey: ['id']).listen((data) {
         if (data.length > orders.length) {
-          addNotification('طلب جديد!', 'تم تسليلم طلب جديد بنجاح 🔔');
+          addNotification('طلب جديد! 📦', 'تم إضافة طلب جديد بنجاح في المنظومة');
         }
+
+        for (var newOrder in data) {
+          final oldOrder = orders.firstWhere((o) => o['id'].toString() == newOrder['id'].toString(), orElse: () => null);
+          if (oldOrder != null && oldOrder['status'] != newOrder['status']) {
+            String statusMsg = newOrder['admin_message'] ?? 'تم تحديث حالة طلبك';
+            addNotification('تحديث الطلب #${newOrder['id']} 🔔', statusMsg);
+          }
+        }
+
         orders = data;
         notifyListeners();
       }, onError: (error) {
@@ -565,7 +574,7 @@ class AppState extends ChangeNotifier {
     try {
       await supabase.from('orders').insert(orderData);
       _cartItems.clear();
-      addNotification('تم إنشاء الطلب بنجاح', 'طلبك بانتظار تحديد السعر ⏳');
+      addNotification('تم إرسال الطلب ⏳', 'طلبك بانتظار تحديد رسوم التوصيل من المشرف');
       notifyListeners();
       debugPrint('✅ تم إنشاء الطلب وإرساله للمشرف وتفريغ السلة بنجاح');
     } catch (e) {
@@ -588,7 +597,7 @@ class AppState extends ChangeNotifier {
         'admin_message': 'تم تحديد رسوم التوصيل ($fee ر.ي) وإسناد الطلب للمندوب بنجاح ⏳',
       }).eq('id', orderId);
 
-      addNotification('تحديث الطلب #$orderId', 'تم تحديد رسوم التوصيل ($fee ر.ي). يرجى تأكيد الطلب! 🔔');
+      addNotification('تم تسعير الطلب #$orderId 💰', 'تم تحديد رسوم التوصيل ($fee ر.ي). يرجى تأكيد الطلب!');
     } catch (e) {
       debugPrint('❌ خطأ تحديث الرسوم: $e');
     }
@@ -599,6 +608,7 @@ class AppState extends ChangeNotifier {
       'status': 'waitingCourierApproval',
       'admin_message': 'تم تأكيد الطلب من قِبل العميل ⏳',
     }).eq('id', orderId);
+    addNotification('تأكيد الطلب 👍', 'تم تأكيد طلبك #$orderId وجاري إشعار المندوب');
   }
 
   Future<void> customerCancelOrder(dynamic orderId) async {
@@ -606,6 +616,7 @@ class AppState extends ChangeNotifier {
       'status': 'cancelledByCustomer',
       'admin_message': 'تم إلغاء الطلب من قِبل العميل ❌',
     }).eq('id', orderId);
+    addNotification('إلغاء الطلب ❌', 'تم إلغاء الطلب #$orderId بناءً على رغبتك');
   }
 
   Future<void> courierRespondToOrder(dynamic orderId, bool accepted) async {
@@ -614,7 +625,7 @@ class AppState extends ChangeNotifier {
         'status': 'onTheWay',
         'admin_message': 'المندوب قَبِل الطلب وهو في الطريق 🟢',
       }).eq('id', orderId);
-      addNotification('طلبك في الطريق!', 'المندوب في طريقه إليك الآن 🛵');
+      addNotification('طلبك في الطريق! 🛵', 'المندوب قَبِل طلبك وهو في طريقه إليك الآن');
     } else {
       await supabase.from('orders').update({
         'status': 'rejectedByCourier',
@@ -622,6 +633,7 @@ class AppState extends ChangeNotifier {
         'assigned_courier': 'لم يتم التعيين',
         'is_fee_sent': false,
       }).eq('id', orderId);
+      addNotification('تحديث المندوب ⚠️', 'المندوب اعتذر عن الطلب، وجاري إعادة تعيين مندوب آخر');
     }
   }
 
@@ -630,7 +642,7 @@ class AppState extends ChangeNotifier {
       'status': 'arrived',
       'admin_message': 'المندوب وصل لموقع العميل 📍',
     }).eq('id', orderId);
-    addNotification('وصول المندوب', 'المندوب وصل إلى موقعك الآن! 📍');
+    addNotification('وصول المندوب 📍', 'المندوب وصل إلى موقعك الآن، يرجى الاستلام');
   }
 
   Future<void> markOrderDelivered(dynamic orderId) async {
@@ -638,6 +650,6 @@ class AppState extends ChangeNotifier {
       'status': 'delivered',
       'admin_message': 'تم تسليم الطلب بنجاح ✅',
     }).eq('id', orderId);
-    addNotification('تم التسليم', 'شكراً لاستخدامك FAST! تم تسليم طلبك بنجاح ✅');
+    addNotification('تم التسليم بنجاح ✅', 'شكراً لاستخدامك FAST! تم تسليم طلبك بنجاح');
   }
 }
