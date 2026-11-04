@@ -47,7 +47,7 @@ class _ChatScreenState extends State<ChatScreen> {
         body: Column(
           children: [
             Expanded(
-              child: StreamBuilder<List>>(
+              child: StreamBuilder(
                 stream: appState.getMessagesForOrder(widget.orderId, widget.targetChat),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -57,7 +57,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     return Center(child: Text('خطأ في تحميل الرسائل: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
                   }
 
-                  final messages = snapshot.data ?? [];
+                  final messages = (snapshot.data as List?) ?? [];
 
                   if (messages.isEmpty) {
                     return const Center(child: Text('لا توجد رسائل بعد، ابدأ المحادثة الآن 💬', style: TextStyle(color: Colors.grey)));
@@ -67,7 +67,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     padding: const EdgeInsets.all(12),
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
-                      final msg = messages[index];
+                      final msg = messages[index] as Map<String, dynamic>;
                       String senderType = msg['sender_type']?.toString() ?? '';
                       String messageText = msg['message_text']?.toString() ?? '';
                       bool isMe = senderType == widget.userRole;
