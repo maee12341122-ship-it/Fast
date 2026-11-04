@@ -69,7 +69,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إرسال رمز التحقق عبر الواتساب المباشر بالصيغة المطلوبة ---
+  // --- إرسال رمز التحقق عبر الواتساب المباشر ---
   Future<void> sendOtpViaWhatsAppDirect(String phone) async {
     if (generatedDynamicOtp == null) return;
 
@@ -165,15 +165,20 @@ class AppState extends ChangeNotifier {
       return currentHour >= startHour || currentHour < endHour;
     }
   }
-
-  // --- جلسة المشرف (آمنة عبر قاعدة بيانات Supabase) ---
+    // --- جلسة المشرف (آمنة عبر قاعدة بيانات Supabase) ---
   bool isAdminLoggedIn = false;
-  // دالة التحقق من تسجيل دخول المشرف بمرونة عالية وحماية كاملة ضد أخطاء الإدخال
+
+  void _loadAdminSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    isAdminLoggedIn = prefs.getBool('isAdminLoggedIn') ?? false;
+    notifyListeners();
+  }
+
+  // دالة التحقق من تسجيل دخول المشرف بمرونة عالية وحماية كاملة
   Future<bool> loginAdminFromSupabase(String username, String password) async {
     try {
       debugPrint('🔍 محاولة تسجيل الدخول للمشرف: [${username.trim()}]');
 
-      // جلب جميع المشرفين من الجدول لضمان المقارنة المرنة
       final response = await supabase.from('admins').select();
       
       if (response != null && response is List) {
@@ -181,7 +186,6 @@ class AppState extends ChangeNotifier {
           String dbUsername = admin['username']?.toString().trim() ?? '';
           String dbPassword = admin['password_hash']?.toString().trim() ?? '';
 
-          // مقارنة اسم المستخدم متجاهلة حالة الحروف الكبيرة والصغيرة (Case-insensitive)
           if (dbUsername.toLowerCase() == username.trim().toLowerCase()) {
             if (dbPassword == password.trim()) {
               isAdminLoggedIn = true;
@@ -191,7 +195,7 @@ class AppState extends ChangeNotifier {
               debugPrint('✅ تم تسجيل دخول المشرف بنجاح!');
               return true;
             } else {
-              debugPrint('❌ اسم المستخدم صحيح، ولكن كلمة المرور غير مطابقة!');
+              debugPrint('❌ كلمة المرور غير مطابقة!');
             }
           }
         }
@@ -350,8 +354,7 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-  // --- سلة المشتريات ---
+    // --- سلة المشتريات ---
   final List<CartItemModel> _cartItems = [];
   List<CartItemModel> get cartItems => _cartItems;
 
