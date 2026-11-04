@@ -47,14 +47,17 @@ class _AdminScreenState extends State<AdminScreen> {
       case 'pricingSentToCustomer': return '🔔 بانتظار موافقة العميل';
       case 'waitingCourierApproval': return '🛵 بانتظار قبول المندوب';
       case 'onTheWay': return '🟢 المندوب في الطريق';
+      case 'arrived': return '📍 المندوب وصل لموقع العميل';
       case 'delivered': return '✅ تم التسليم';
+      case 'cancelledByCustomer': return '❌ ملغى من العميل';
       default: return status;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context);
+    // 👈 استخدام watch لجعل لوحة المشرف تتحدث تلقائياً ولحظياً فور حدوث أي تغيير في قاعدة البيانات
+    final appState = context.watch<AppState>();
 
     final List<Widget> adminPages = [
       _buildOrdersManagement(appState),
@@ -111,7 +114,9 @@ class _AdminScreenState extends State<AdminScreen> {
       itemBuilder: (context, index) {
         final order = appState.orders[index];
         final orderId = order['id'].toString();
-        final arabicStatus = _getArabicStatus(order['status'] ?? '');
+        final rawStatus = order['status'] ?? '';
+        final arabicStatus = _getArabicStatus(rawStatus);
+        final assignedCourier = order['assigned_courier']?.toString() ?? 'لم يتم التعيين';
 
         if (!_feeControllers.containsKey(orderId)) {
           _feeControllers[orderId] = TextEditingController(text: order['delivery_fee']?.toString() ?? '0');
@@ -138,7 +143,55 @@ class _AdminScreenState extends State<AdminScreen> {
                 Text('📍 العنوان: ${order['address']}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 Text('🛒 المنتجات: ${order['items_description']}', style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 Text('💰 سعر المنتجات: ${order['products_total']} ر.ي', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                Text('🛵 المندوب الحالي: $assignedCourier', style: const TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
+
+                // --- أزرار الشات المعزولة للمشرف ---
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey, foregroundColor: Colors.white),
+                        icon: const Icon(Icons.chat, size: 16),
+                        label: const Text('شات العميل', style: TextStyle(fontSize: 12)),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatScreen(
+                                orderId: orderId,
+                                userRole: 'admin',
+                                targetChat: 'admin_customer',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+                        icon: const Icon(Icons.delivery_dining, size: 16),
+                        label: const Text('شات المندوب', style: TextStyle(fontSize: 12)),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChatScreen(
+                                orderId: orderId,
+                                userRole: 'admin',
+                                targetChat: 'admin_courier',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
                 Row(
                   children: [
                     Expanded(
