@@ -294,35 +294,45 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: Text('تسجيل دخول المشرف الآمن', style: TextStyle(color: textColor, fontSize: 14)),
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TextField(
-                              controller: usernameController,
-                              style: TextStyle(color: textColor, fontSize: 14),
-                              decoration: const InputDecoration(
-                                labelText: 'اسم المستخدم',
-                                labelStyle: TextStyle(color: Colors.grey),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            TextField(
-                              controller: passwordController,
-                              obscureText: true,
-                              style: TextStyle(color: textColor, fontSize: 14),
-                              decoration: const InputDecoration(
-                                labelText: 'كلمة المرور',
-                                labelStyle: TextStyle(color: Colors.grey),
-                              ),
-                            ),
-                          ],
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () async {
-                              bool loginSuccess = await appState.loginAdminFromSupabase(
-                                usernameController.text, 
-                                passwordController.text
-                              );
-                              
+                          actions: [
+  TextButton(
+    onPressed: () => Navigator.pop(context),
+    child: const Text('إلغاء', style: TextStyle(color: Colors.grey)),
+  ),
+  ElevatedButton(
+    style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+    onPressed: () async {
+      // تنظيف المدخلات من أي مسافات زائدة قد تم إدخالها بالخطأ من لوحة المفاتيح
+      String username = usernameController.text.trim();
+      String password = passwordController.text.trim();
+
+      bool loginSuccess = await appState.loginAdminFromSupabase(username, password);
+      
+      // إغلاق النافذة المنبثقة أولاً
+      if (context.mounted) Navigator.pop(context);
+
+      if (loginSuccess) {
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminScreen()),
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('مرحباً بك، تم تسجيل دخول المشرف بنجاح! 🚀')),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('اسم المستخدم أو كلمة المرور غير صحيحة! ❌')),
+          );
+        }
+      }
+    },
+    child: const Text('دخول', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+  ),
+],
+       
                               Navigator.pop(context);
 
                               if (loginSuccess) {
