@@ -166,7 +166,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- جلسة المشرف (كلمة المرور المشفرة والآمنة والمصححة) ---
+  // --- جلسة المشرف (آمنة عبر قاعدة بيانات Supabase) ---
   bool isAdminLoggedIn = false;
 
   void _loadAdminSession() async {
@@ -175,19 +175,32 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool loginAdmin(String password) {
-    // فك تشفير البايتس بترميز آمن لضمان تطابق كلمة المرور (maeen775145534@) تماماً
-    String decodedAdminPass = utf8.decode([109, 97, 101, 101, 110, 55, 55, 53, 49, 52, 53, 53, 52, 51, 52, 64]);
+  // دالة التحقق من تسجيل دخول المشرف عبر جدول admins في Supabase
+  Future<bool> loginAdminFromSupabase(String username, String password) async {
+    try {
+      final response = await supabase
+          .from('admins')
+          .select()
+          .eq('username', username.trim())
+          .maybeSingle();
 
-    if (password.trim() == decodedAdminPass) {
-      isAdminLoggedIn = true;
-      SharedPreferences.getInstance().then((prefs) {
-        prefs.setBool('isAdminLoggedIn', true);
-      });
-      notifyListeners();
-      return true;
+      if (response != null) {
+        String dbPassword = response['password_hash'] ?? '';
+        
+        if (password.trim() == dbPassword) {
+          isAdminLoggedIn = true;
+          SharedPreferences.getInstance().then((prefs) {
+            prefs.setBool('isAdminLoggedIn', true);
+          });
+          notifyListeners();
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('❌ خطأ في الاتصال بقاعدة البيانات للتحقق من المشرف: $e');
+      return false;
     }
-    return false;
   }
 
   void logoutAdmin() {
