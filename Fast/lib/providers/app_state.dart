@@ -14,7 +14,7 @@ class AppState extends ChangeNotifier {
   AppState() {
     _loadAdminSession();
     _loadCourierSession();
-    _loadUserSession(); // تحميل جلسة العميل تلقائياً
+    _loadUserSession();
     fetchStoreSettings();
     fetchProductsFromSupabase();
     fetchCouriersFromSupabase();
@@ -33,34 +33,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إدارة رسائل الشات ---
-  List getMessagesForOrder(String orderId, String targetChat) {
-    return chatMessages.where((msg) => msg['order_id'].toString() == orderId.toString() && msg['target_chat'] == targetChat).toList();
-  }
-
-  Future<void> sendChatMessage(String orderId, String senderRole, String targetChat, String message) async {
-    try {
-      final newMessage = {
-        'order_id': orderId,
-        'sender_role': senderRole,
-        'target_chat': targetChat,
-        'message': message,
-        'timestamp': DateTime.now().toIso8601String(),
-      };
-
-      chatMessages.add(newMessage);
-      notifyListeners();
-
-      try {
-        await supabase.from('chat_messages').insert(newMessage);
-      } catch (e) {
-        debugPrint('⚠️ ملاحظة حول جدول الشات في سوبابيس: $e');
-      }
-    } catch (e) {
-      debugPrint('❌ خطأ في إرسال رسالة الشات: $e');
-    }
-  }
-
   String currentCity = 'تعز';
   void setCity(String city) {
     currentCity = city;
@@ -68,6 +40,37 @@ class AppState extends ChangeNotifier {
       userProfile!['city'] = city;
     }
     notifyListeners();
+  }
+
+  // --- إدارة رسائل الشات المباشر مع Supabase ---
+  List chatMessages = [];
+
+  // جلب وتتبع رسائل الطلب لحظياً من جدول messages
+  Stream<List>> getOrderChatStream(dynamic orderId) {
+    return supabase
+        .from('messages')
+        .stream(primaryKey: ['id'])
+        .eq('order_id', orderId)
+        .order('created_at', ascending: true);
+  }
+
+  // إرسال رسالة شات جديدة وحفظها في Supabase
+  Future<void> sendChatMessage(dynamic orderId, String senderRole, String senderId, String messageText) async {
+    if (messageText.trim().isEmpty) return;
+
+    final newMessage = {
+      'order_id': orderId,
+      'sender_type': senderRole,
+      'sender_id': senderId,
+      'message_text': messageText,
+    };
+
+    try {
+      await supabase.from('messages').insert(newMessage);
+      debugPrint('✅ تم إرسال الرسالة بنجاح');
+    } catch (e) {
+      debugPrint('❌ خطأ في إرسال رسالة الشات: $e');
+    }
   }
 
   // --- إرسال رمز التحقق عبر الواتساب المباشر ---
@@ -230,7 +233,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- مصادقة المستخدم والـ OTP (مع الحفظ الدائم للجلسة) ---
+  // --- مصادقة العميل والجلسة الدائمة ---
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
 
@@ -308,7 +311,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إدارة المناديب والحفظ في Supabase ---
+  // --- إدارة المناديب والربط السحابي ---
   Map<String, dynamic>? currentCourier;
   List couriers = [];
 
@@ -445,7 +448,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إدارة المنتجات وحفظها في Supabase ---
+  // --- إدارة المنتجات ---
   List products = [];
 
   Future<void> fetchProductsFromSupabase() async {
@@ -506,9 +509,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- الطلبات والمزامنة اللحظية ---
+  // --- الطلبات والتحديثات اللحظية والتنبيهات ---
   List orders = [];
-  List chatMessages = [];
   List notifications = [];
 
   void addNotification(String title, String body) {
@@ -523,6 +525,9 @@ class AppState extends ChangeNotifier {
       notifyListeners();
 
       supabase.from('orders').stream(primaryKey: ['id']).listen((data) {
+        if (data.length > orders.length) {
+          addNotification('طلب جديد!', 'تم تسليلم طلب جديد بنجاح 🔔');
+        }
         orders = data;
         notifyListeners();
       }, onError: (error) {
@@ -558,12 +563,8 @@ class AppState extends ChangeNotifier {
     };
 
     try {
-      // إرسال الطلب لقاعدة البيانات
       await supabase.from('orders').insert(orderData);
-      
-      // تفريغ السلة تماماً بعد تأكيد الطلب
       _cartItems.clear();
-      
       addNotification('تم إنشاء الطلب بنجاح', 'طلبك بانتظار تحديد السعر ⏳');
       notifyListeners();
       debugPrint('✅ تم إنشاء الطلب وإرساله للمشرف وتفريغ السلة بنجاح');
