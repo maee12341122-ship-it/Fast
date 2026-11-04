@@ -43,7 +43,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إدارة رسائل الشات (بدون أي أقواس زاوية لمنع خطأ النسخ) ---
+  // --- إدارة رسائل الشات ---
   Stream getMessagesForOrder(dynamic orderId, String targetChat) {
     return supabase
         .from('messages')
@@ -223,7 +223,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- مصادقة العميل والجلسة الدائمة ---
+  // --- مصادقة العميل وتعديل الملف الشخصي ---
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
 
@@ -301,7 +301,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إدارة المناديب والربط السحابي ---
+  // --- إدارة المناديب وحالتهم (متاح / مشغول) ---
   Map<String, dynamic>? currentCourier;
   List couriers = [];
 
@@ -491,7 +491,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- الطلبات وعزلها لكل عميل ---
+  // --- الطلبات والتحديث اللحظي ---
   List orders = [];
   List notifications = [];
 
@@ -573,10 +573,10 @@ class AppState extends ChangeNotifier {
         'assigned_courier': courierName.trim(),
         'status': 'pricingSentToCustomer',
         'is_fee_sent': true,
-        'admin_message': 'تم تحديد رسوم التوصيل ($fee ر.ي) وإسناد الطلب للمندوب بنجاح ⏳',
+        'admin_message': 'تم تحديد رسوم التوصيل ($fee ر.ي). بانتظار موافقة العميل ⏳',
       }).eq('id', orderId);
 
-      addNotification('تم تسعير الطلب #$orderId 💰', 'تم تحديد رسوم التوصيل ($fee ر.ي). يرجى تأكيد الطلب!');
+      addNotification('تم تسعير الطلب #$orderId 💰', 'تم تحديد رسوم التوصيل ($fee ر.ي). يرجى من العميل تأكيد الطلب!');
     } catch (e) {
       debugPrint('❌ خطأ تحديث الرسوم: $e');
     }
@@ -602,12 +602,19 @@ class AppState extends ChangeNotifier {
     addNotification('إلغاء الطلب ❌', 'تم إلغاء الطلب #$orderId بناءً على رغبتك');
   }
 
+  // --- رد المندوب وتحديث حالته إلى مشغول/متاح ---
   Future<void> courierRespondToOrder(dynamic orderId, bool accepted) async {
     if (accepted) {
       await supabase.from('orders').update({
         'status': 'onTheWay',
         'admin_message': 'المندوب قَبِل الطلب وهو في الطريق 🟢',
       }).eq('id', orderId);
+
+      if (currentCourier != null) {
+        String cId = currentCourier!['id'].toString();
+        await supabase.from('couriers').update({'status': 'busy'}).eq('id', cId);
+        currentCourier!['status'] = 'busy';
+      }
     } else {
       await supabase.from('orders').update({
         'status': 'rejectedByCourier',
@@ -630,5 +637,11 @@ class AppState extends ChangeNotifier {
       'status': 'delivered',
       'admin_message': 'تم تسليم الطلب بنجاح ✅',
     }).eq('id', orderId);
+
+    if (currentCourier != null) {
+      String cId = currentCourier!['id'].toString();
+      await supabase.from('couriers').update({'status': 'available'}).eq('id', cId);
+      currentCourier!['status'] = 'available';
+    }
   }
 }
