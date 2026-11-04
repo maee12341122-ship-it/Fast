@@ -176,7 +176,7 @@ class AppState extends ChangeNotifier {
   }
 
   // دالة التحقق من تسجيل دخول المشرف عبر جدول admins في Supabase مع تنظيف المسافات
-  Future<bool> loginAdminFromSupabase(String username, String password) async {
+    Future<bool> loginAdminFromSupabase(String username, String password) async {
     try {
       final response = await supabase
           .from('admins')
@@ -185,20 +185,19 @@ class AppState extends ChangeNotifier {
           .maybeSingle();
 
       if (response != null) {
-        String dbPassword = response['password_hash'] ?? '';
+        String dbPassword = response['password_hash']?.toString() ?? '';
         
         if (password.trim() == dbPassword.trim()) {
           isAdminLoggedIn = true;
-          SharedPreferences.getInstance().then((prefs) {
-            prefs.setBool('isAdminLoggedIn', true);
-          });
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isAdminLoggedIn', true);
           notifyListeners();
           return true;
         }
       }
       return false;
     } catch (e) {
-      debugPrint('❌ خطأ في الاتصال بقاعدة البيانات للتحقق من المشرف: $e');
+      debugPrint('❌ خطأ في الاتصال بقاعدة البيانات: $e');
       return false;
     }
   }
