@@ -51,22 +51,26 @@ class _ChatScreenState extends State<ChatScreen> {
               child: StreamBuilder(
                 stream: appState.getMessagesForOrder(widget.orderId, widget.targetChat),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: Colors.amber));
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('خطأ في تحميل الرسائل: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
-                  }
-
-                  // جلب الرسائل وفلترتها حسب القناة المستهدفة لضمان عدم التداخل نهائياً
-                  final rawMessages = (snapshot.data as List?) ?? [];
+                  // في حال كان هناك خطأ في الاتصال الحي، نعرض المحتوى بشكل آمن ولا تتعطل الشاشة
+                  final rawMessages = snapshot.hasData ? ((snapshot.data as List?) ?? []) : [];
+                  
+                  // فلترة الرسائل حسب القناة المستهدفة لضمان عدم التداخل نهائياً
                   final messages = rawMessages.where((msg) {
                     String chatType = msg['target_chat']?.toString() ?? 'admin_customer';
                     return chatType == widget.targetChat;
                   }).toList();
 
+                  if (messages.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator(color: Colors.amber));
+                  }
+
                   if (messages.isEmpty) {
-                    return const Center(child: Text('لا توجد رسائل بعد، ابدأ المحادثة الآن 💬', style: TextStyle(color: Colors.grey)));
+                    return const Center(
+                      child: Text(
+                        'لا توجد رسائل بعد، ابدأ المحادثة الآن 💬', 
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
+                    );
                   }
 
                   return ListView.builder(
