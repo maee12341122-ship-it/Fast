@@ -11,19 +11,43 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
+
+    // إعداد تأثير ظهور تدريجي ناعم (Fade-in Animation) لإعطاء طابع احترافي فاخر
+    _controller = AnimationController(
+      vsDuration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1200),
+    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _controller.forward();
+
     // الانتظار لمدة ثانية ونصف ثم الانتقال بسلاسة للشاشة الرئيسية
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    Future.delayed(const Duration(milliseconds: 1800), () {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
         );
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -35,32 +59,46 @@ class _SplashScreenState extends State<SplashScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // الشعار الفخم بـ حجم كبير وبارز
-              const FastAppLogo(iconSize: 70, textSize: 32, padding: EdgeInsets.all(24)),
-              const SizedBox(height: 25),
-              const Text(
-                'أسرع خدمة توصيل في تعز',
-                style: TextStyle(
-                  color: Colors.amber,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
+        body: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // الشعار الفخم بـ حجم كبير وبارز مع تأثير توهج خفيف
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.amber.withOpacity(0.2), width: 1.5),
+                  ),
+                  child: const FastAppLogo(iconSize: 75, textSize: 32, padding: EdgeInsets.all(0)),
                 ),
-              ),
-              const SizedBox(height: 40),
-              const CircularProgressIndicator(
-                color: Colors.amber,
-                strokeWidth: 3,
-              ),
-            ],
+                const SizedBox(height: 30),
+                const Text(
+                  'أسرع خدمة توصيل في تعز ⚡',
+                  style: TextStyle(
+                    color: Colors.amber,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 45),
+                const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    color: Colors.amber,
+                    strokeWidth: 2.5,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-
