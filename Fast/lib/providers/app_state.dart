@@ -44,9 +44,7 @@ class AppState extends ChangeNotifier {
   }
 
   // --- إدارة رسائل الشات المباشر مع Supabase ---
-  List chatMessages = [];
-
-  Stream<List>> getOrderChatStream(dynamic orderId) {
+  Stream<List>> getMessagesForOrder(dynamic orderId, String targetChat) {
     return supabase
         .from('messages')
         .stream(primaryKey: ['id'])
@@ -54,13 +52,13 @@ class AppState extends ChangeNotifier {
         .order('created_at', ascending: true);
   }
 
-  Future<void> sendChatMessage(dynamic orderId, String senderRole, String senderId, String messageText) async {
+  Future<void> sendChatMessage(dynamic orderId, String senderRole, String targetChat, String messageText) async {
     if (messageText.trim().isEmpty) return;
 
     final newMessage = {
       'order_id': orderId,
       'sender_type': senderRole,
-      'sender_id': senderId,
+      'target_chat': targetChat,
       'message_text': messageText,
     };
 
@@ -143,22 +141,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> updateStoreSettings(int start, int end) async {
-    startHour = start;
-    endHour = end;
-    notifyListeners();
-
-    try {
-      await supabase.from('settings').upsert({
-        'id': 1,
-        'start_hour': start,
-        'end_hour': end,
-      });
-    } catch (e) {
-      debugPrint('❌ خطأ في حفظ أوقات الدوام: $e');
-    }
-  }
-
   bool get isStoreOpen {
     final now = DateTime.now();
     final currentHour = now.hour;
@@ -180,14 +162,11 @@ class AppState extends ChangeNotifier {
 
   Future<bool> loginAdminFromSupabase(String username, String password) async {
     try {
-      debugPrint('🔍 محاولة تسجيل الدخول للمشرف: [${username.trim()}]');
-
       if (username.trim().toLowerCase() == 'admin' && password.trim() == '123456') {
         isAdminLoggedIn = true;
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isAdminLoggedIn', true);
         notifyListeners();
-        debugPrint('✅ تم تسجيل دخول المشرف بنجاح تام!');
         return true;
       }
 
@@ -203,16 +182,12 @@ class AppState extends ChangeNotifier {
             final prefs = await SharedPreferences.getInstance();
             await prefs.setBool('isAdminLoggedIn', true);
             notifyListeners();
-            debugPrint('✅ تم تسجيل دخول المشرف من القاعدة بنجاح!');
             return true;
           }
         }
       }
-
-      debugPrint('❌ اسم المستخدم أو كلمة المرور غير صحيحة!');
       return false;
     } catch (e) {
-      debugPrint('❌ خطأ استثنائي في تسجيل الدخول: $e');
       if (username.trim().toLowerCase() == 'admin' && password.trim() == '123456') {
         isAdminLoggedIn = true;
         final prefs = await SharedPreferences.getInstance();
@@ -352,7 +327,6 @@ class AppState extends ChangeNotifier {
         'completed_orders': 0,
       });
       await fetchCouriersFromSupabase();
-      debugPrint('✅ تم حفظ المندوب بنجاح');
     } catch (e) {
       debugPrint('❌ خطأ في حفظ المندوب: $e');
     }
@@ -403,18 +377,12 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- سلة المشتريات ---
+  // --- سلة المشتريات والطلبات الخاصة ---
   final List<CartItemModel> _cartItems = [];
   List<CartItemModel> get cartItems => _cartItems;
 
   int get totalCartItemsCount => _cartItems.fold(0, (sum, item) => sum + item.quantity);
   double get totalAmount => _cartItems.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
-
-  int getProductQuantityInCart(String productId) {
-    final index = _cartItems.indexWhere((item) => item.id == productId);
-    if (index >= 0) return _cartItems[index].quantity;
-    return 0;
-  }
 
   void addToCart(CartItemModel item) {
     final index = _cartItems.indexWhere((element) => element.id == item.id);
@@ -445,6 +413,23 @@ class AppState extends ChangeNotifier {
   void clearCart() {
     _cartItems.clear();
     notifyListeners();
+  }
+
+  // توافق مع CustomOrderWidget
+  void addCustomItem({required String name, required int price, required int quantity, required String notes}) {
+    _cartItems.add(CartItemModel(
+      id: 'custom-${DateTime.now().millisecondsSinceEpoch}',
+      name: '$name (ملاحظات: $notes)',
+      price: price.toDouble(),
+      quantity: quantity,
+      restaurantId: 'طلبات خاصة',
+      imageUrl: '',
+    ));
+    notifyListeners();
+  }
+
+  void addCustomOrderToCart({required String customName, required double estimatedPrice}) {
+    addCustomItem(name: customName, price: estimatedPrice.toInt(), quantity: 1, notes: '');
   }
 
   // --- إدارة المنتجات ---
@@ -486,31 +471,19 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void addCustomOrderToCart({required String customName, required double estimatedPrice}) {
-    _cartItems.add(CartItemModel(
-      id: 'custom-${DateTime.now().millisecondsSinceEpoch}',
-      name: 'طلب خاص: $customName',
-      price: estimatedPrice,
-      quantity: 1,
-      restaurantId: 'خدمة الطلبات الخاصة',
-      imageUrl: '',
-    ));
-    notifyListeners();
-  }
-
-  void toggleProductAvailability(String id) async {
-    final index = products.indexWhere((p) => p.id == id);
-    if (index != -1) {
-      final p = products[index];
-      final newStatus = !p.available;
-      await supabase.from('products').update({'available': newStatus}).eq('id', id);
-      fetchProductsFromSupabase();
-    }
-  }
-
-  // --- الطلبات والتحديثات اللحظية والتنبيهات الحقيقية ---
+  // --- الطلبات وعزلها لكل عميل ---
   List orders = [];
   List notifications = [];
+
+  // تصفية طلبات العميل الحالي برقم هاتفه فقط لضمان الاستقلالية التامة
+  List get customerOrders {
+    if (userProfile == null || userProfile!['phone'] == null) return [];
+    String myPhone = userProfile!['phone']!.trim();
+    return orders.where((o) {
+      String orderPhone = o['phone']?.toString().trim() ?? '';
+      return orderPhone == myPhone;
+    }).toList();
+  }
 
   void addNotification(String title, String body) {
     notifications.insert(0, {'title': title, 'body': body, 'time': DateTime.now()});
@@ -525,18 +498,6 @@ class AppState extends ChangeNotifier {
       notifyListeners();
 
       supabase.from('orders').stream(primaryKey: ['id']).listen((data) {
-        if (data.length > orders.length) {
-          addNotification('طلب جديد! 📦', 'تم إضافة طلب جديد بنجاح في المنظومة');
-        }
-
-        for (var newOrder in data) {
-          final oldOrder = orders.firstWhere((o) => o['id'].toString() == newOrder['id'].toString(), orElse: () => null);
-          if (oldOrder != null && oldOrder['status'] != newOrder['status']) {
-            String statusMsg = newOrder['admin_message'] ?? 'تم تحديث حالة طلبك';
-            addNotification('تحديث الطلب #${newOrder['id']} 🔔', statusMsg);
-          }
-        }
-
         orders = data;
         notifyListeners();
       }, onError: (error) {
@@ -576,7 +537,6 @@ class AppState extends ChangeNotifier {
       _cartItems.clear();
       addNotification('تم إرسال الطلب ⏳', 'طلبك بانتظار تحديد رسوم التوصيل من المشرف');
       notifyListeners();
-      debugPrint('✅ تم إنشاء الطلب وإرساله للمشرف وتفريغ السلة بنجاح');
     } catch (e) {
       debugPrint('❌ خطأ في إنشاء الطلب: $e');
     }
@@ -603,12 +563,16 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> customerConfirmOrder(dynamic orderId) async {
+  Future<void> customerApprovePricing(dynamic orderId) async {
     await supabase.from('orders').update({
       'status': 'waitingCourierApproval',
-      'admin_message': 'تم تأكيد الطلب من قِبل العميل ⏳',
+      'admin_message': 'تم تأكيد الطلب والموافقة على السعر من قِبل العميل ⏳',
     }).eq('id', orderId);
     addNotification('تأكيد الطلب 👍', 'تم تأكيد طلبك #$orderId وجاري إشعار المندوب');
+  }
+
+  Future<void> customerConfirmOrder(dynamic orderId) async {
+    await customerApprovePricing(orderId);
   }
 
   Future<void> customerCancelOrder(dynamic orderId) async {
@@ -625,7 +589,6 @@ class AppState extends ChangeNotifier {
         'status': 'onTheWay',
         'admin_message': 'المندوب قَبِل الطلب وهو في الطريق 🟢',
       }).eq('id', orderId);
-      addNotification('طلبك في الطريق! 🛵', 'المندوب قَبِل طلبك وهو في طريقه إليك الآن');
     } else {
       await supabase.from('orders').update({
         'status': 'rejectedByCourier',
@@ -633,7 +596,6 @@ class AppState extends ChangeNotifier {
         'assigned_courier': 'لم يتم التعيين',
         'is_fee_sent': false,
       }).eq('id', orderId);
-      addNotification('تحديث المندوب ⚠️', 'المندوب اعتذر عن الطلب، وجاري إعادة تعيين مندوب آخر');
     }
   }
 
@@ -642,7 +604,6 @@ class AppState extends ChangeNotifier {
       'status': 'arrived',
       'admin_message': 'المندوب وصل لموقع العميل 📍',
     }).eq('id', orderId);
-    addNotification('وصول المندوب 📍', 'المندوب وصل إلى موقعك الآن، يرجى الاستلام');
   }
 
   Future<void> markOrderDelivered(dynamic orderId) async {
@@ -650,6 +611,5 @@ class AppState extends ChangeNotifier {
       'status': 'delivered',
       'admin_message': 'تم تسليم الطلب بنجاح ✅',
     }).eq('id', orderId);
-    addNotification('تم التسليم بنجاح ✅', 'شكراً لاستخدامك FAST! تم تسليم طلبك بنجاح');
   }
 }
