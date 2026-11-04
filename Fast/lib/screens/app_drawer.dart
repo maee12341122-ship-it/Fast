@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import 'delivery_login_screen.dart';
+import 'edit_profile_screen.dart'; // 👈 استدعاء صفحة تعديل الحساب
 
 class AppDrawer extends StatelessWidget {
   final ValueChanged<int> onNavigate;
@@ -28,6 +29,16 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
           _item(context, Icons.person_outline, 'حسابي', () => onNavigate(3)),
+          
+          // 👈 إضافة زر تعديل الحساب والموقع هنا
+          _item(context, Icons.edit_location_alt, 'تعديل الحساب والموقع', () {
+            Navigator.pop(context); // إغلاق القائمة الجانبية
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+            );
+          }),
+
           _item(context, Icons.receipt_long, 'طلباتي', () => onNavigate(2)),
           _item(context, Icons.location_city, 'تغيير المدينة (تعز)', () {
             Navigator.pop(context);
