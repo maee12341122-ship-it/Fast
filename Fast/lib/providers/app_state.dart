@@ -141,6 +141,22 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> updateStoreSettings(int start, int end) async {
+    startHour = start;
+    endHour = end;
+    notifyListeners();
+
+    try {
+      await supabase.from('settings').upsert({
+        'id': 1,
+        'start_hour': start,
+        'end_hour': end,
+      });
+    } catch (e) {
+      debugPrint('❌ خطأ في حفظ أوقات الدوام: $e');
+    }
+  }
+
   bool get isStoreOpen {
     final now = DateTime.now();
     final currentHour = now.hour;
@@ -384,6 +400,12 @@ class AppState extends ChangeNotifier {
   int get totalCartItemsCount => _cartItems.fold(0, (sum, item) => sum + item.quantity);
   double get totalAmount => _cartItems.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
 
+  int getProductQuantityInCart(String productId) {
+    final index = _cartItems.indexWhere((item) => item.id == productId);
+    if (index >= 0) return _cartItems[index].quantity;
+    return 0;
+  }
+
   void addToCart(CartItemModel item) {
     final index = _cartItems.indexWhere((element) => element.id == item.id);
     if (index >= 0) {
@@ -415,7 +437,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // توافق مع CustomOrderWidget
   void addCustomItem({required String name, required int price, required int quantity, required String notes}) {
     _cartItems.add(CartItemModel(
       id: 'custom-${DateTime.now().millisecondsSinceEpoch}',
@@ -465,7 +486,6 @@ class AppState extends ChangeNotifier {
         'image_url': product.imageUrl,
       });
       await fetchProductsFromSupabase();
-      debugPrint('✅ تم حفظ المنتج بنجاح');
     } catch (e) {
       debugPrint('❌ خطأ في حفظ المنتج: $e');
     }
@@ -475,7 +495,6 @@ class AppState extends ChangeNotifier {
   List orders = [];
   List notifications = [];
 
-  // تصفية طلبات العميل الحالي برقم هاتفه فقط لضمان الاستقلالية التامة
   List get customerOrders {
     if (userProfile == null || userProfile!['phone'] == null) return [];
     String myPhone = userProfile!['phone']!.trim();
