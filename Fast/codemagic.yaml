@@ -42,6 +42,8 @@ workflows:
           printf 'flutter.sdk=%s\nsdk.dir=%s\n' "$FLUTTER_SDK" "$ANDROID_SDK" > android/local.properties
       - name: Get Flutter packages
         script: flutter pub get
+      - name: Generate App Launcher Icon 🖼️
+        script: flutter pub run flutter_launcher_icons
       - name: Build release APK
         script: flutter build apk --release --android-skip-build-dependency-validation
     artifacts:
