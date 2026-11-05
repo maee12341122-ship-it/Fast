@@ -5,12 +5,17 @@ import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import '../widgets/empty_state.dart';
 
-// متغير لتتبع الطلبات التي تم عرض نافذة التسعير لها لمنع تكرارها
-final Set<String> _processedPricingOrders = {};
-
-class OrdersScreen extends StatelessWidget {
+class OrdersScreen extends StatefulWidget {
   final VoidCallback? onOpenDrawer;
   const OrdersScreen({super.key, this.onOpenDrawer});
+
+  @override
+  State<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends State<OrdersScreen> {
+  // جعلنا مجموعة التتبع داخل الـ State لكي تتحدث وتتفرغ بسلامة عند تغيير الحسابات
+  final Set<String> _processedPricingOrders = {};
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +28,7 @@ class OrdersScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: const Color(0xFF1E1E1E),
           elevation: 2,
-          leading: onOpenDrawer == null ? null : IconButton(icon: const Icon(Icons.menu, color: AppConstants.gold), onPressed: onOpenDrawer),
+          leading: widget.onOpenDrawer == null ? null : IconButton(icon: const Icon(Icons.menu, color: AppConstants.gold), onPressed: widget.onOpenDrawer),
           title: const Text('طلباتي', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16)),
         ),
         body: orders.isEmpty
@@ -55,13 +60,13 @@ class OrdersScreen extends StatelessWidget {
     final assignedCourier = order is Map ? (order['assigned_courier']?.toString() ?? 'لم يتم التعيين') : order.assignedCourier;
     final adminMessage = order is Map ? (order['admin_message']?.toString() ?? '') : '';
 
-    // 👈 استخراج بيانات الدفع (نقدي أو محافظ إلكترونية) لعرضها في تفاصيل الطلب
     final paymentMethod = order is Map ? (order['payment_method']?.toString() ?? 'cash') : 'cash';
     final paymentAccount = order is Map ? (order['payment_account']?.toString() ?? '') : '';
     final paymentDisplay = paymentMethod == 'cash'
         ? '💵 نقداً عند الاستلام'
         : '💳 محفظة ($paymentMethod) - حساب: $paymentAccount';
 
+    // فحص ذكي ومستقل لكل طلب ليظهر الشاشة المنبثقة بدقة متناهية
     if (status == 'pricingSentToCustomer' && !_processedPricingOrders.contains(orderId)) {
       _processedPricingOrders.add(orderId);
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -142,7 +147,6 @@ class OrdersScreen extends StatelessWidget {
                             Text('📍 العنوان: $address', style: const TextStyle(color: Colors.white70, fontSize: 13)),
                             const Divider(color: Colors.white12),
                             
-                            // 👈 عرض طريقة الدفع في نافذة تفاصيل الطلب
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(8),
