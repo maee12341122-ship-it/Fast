@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import '../utils/constants.dart';
+import '../../utils/constants.dart'; // 👈 تصحيح مسار الاستيراد للصعود مستويين
 
 class MapLocationScreen extends StatefulWidget {
   const MapLocationScreen({Key? key}) : super(key: key);
@@ -44,8 +44,9 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
         }
       }
 
+      // 💡 تم تحديث الاستدعاء ليتوافق مع أحدث إصدارات مكتبة geolocator بدون أخطاء
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
 
       LatLng currentLatLng = LatLng(position.latitude, position.longitude);
@@ -76,9 +77,10 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
         backgroundColor: backgroundColor,
         appBar: AppBar(
           backgroundColor: cardColor,
-          title: const Text('حدد موقع منزلك على خريطة جوجل', style: TextStyle(color: AppConstants.gold, fontSize: 15, fontWeight: FontWeight.bold)),
+          // 💡 إزالة const لتجنب خطأ Not a constant expression مع AppConstants.gold
+          title: Text('حدد موقع منزلك على خريطة جوجل', style: TextStyle(color: AppConstants.gold, fontSize: 15, fontWeight: FontWeight.bold)),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_forward, color: AppConstants.gold),
+            icon: Icon(Icons.arrow_forward, color: AppConstants.gold),
             onPressed: () => Navigator.pop(context, _selectedAddressName),
           ),
         ),
@@ -119,8 +121,8 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
               child: FloatingActionButton(
                 backgroundColor: cardColor,
                 child: _isLoadingGps 
-                    ? const CircularProgressIndicator(color: AppConstants.gold) 
-                    : const Icon(Icons.my_location, color: AppConstants.gold),
+                    ? CircularProgressIndicator(color: AppConstants.gold) 
+                    : Icon(Icons.my_location, color: AppConstants.gold),
                 onPressed: _determinePosition,
               ),
             ),
@@ -143,7 +145,7 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.home, color: AppConstants.gold),
+                        Icon(Icons.home, color: AppConstants.gold),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
