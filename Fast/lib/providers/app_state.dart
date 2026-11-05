@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
-import '../models/address_model.dart'; // 👈 أضفنا استيراد نموذج العناوين لمعالجة AddOrUpdateAddress
+import '../models/address_model.dart';
 import '../services/notification_service.dart';
 
 class AppState extends ChangeNotifier {
@@ -36,7 +36,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 👈 إضافة دعم المظهر (ThemeMode) وتغييره كما تطلبه شاشة التطبيق
   ThemeMode get themeMode => isDarkMode ? ThemeMode.dark : ThemeMode.light;
   
   void setThemeMode(ThemeMode mode) {
@@ -114,7 +113,6 @@ class AppState extends ChangeNotifier {
     );
   }
 
-  // 👈 تسلسل طلب الأذونات: الموقع أولاً ثم الإشعارات ثانياً
   Future<void> requestLocationAndNotificationPermissions() async {
     try {
       LocationPermission locationPermission = await Geolocator.checkPermission();
@@ -364,7 +362,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // 👈 إضافة الدوال المفقودة لتعديل بيانات العميل والعناوين لتتوافق مع الشاشات
   Future<void> updateUser({required String name, required String phone}) async {
     if (userProfile != null) {
       userProfile!['name'] = name;
@@ -680,10 +677,10 @@ class AppState extends ChangeNotifier {
       'customer_name': customerName,
       'phone': phone,
       'address': address,
-      'items_description': itemsDesc,
+      'items_desc': itemsDesc,
       'products_total': productsTotal,
+      'total_amount': productsTotal,
       'delivery_fee': 0.0,
-      'total_price': productsTotal,
       'assigned_courier': 'لم يتم التعيين',
       'status': 'waitingForPricing',
       'is_fee_sent': false,
@@ -694,12 +691,17 @@ class AppState extends ChangeNotifier {
     };
 
     try {
+      // إرسال الطلب الفعلي إلى قاعدة بيانات Supabase
       await supabase.from('orders').insert(orderData);
+
+      // تفريغ السلة محلياً لضمان عدم بقاء المنتجات بعد إتمام الطلب بنجاح
       _cartItems.clear();
+
       addNotification('تم إرسال الطلب ⏳', 'طلبك بانتظار تحديد رسوم التوصيل من المشرف');
       notifyListeners();
+      debugPrint('🟢 تم حفظ الطلب في Supabase وتفريغ السلة بنجاح تام');
     } catch (e) {
-      debugPrint('❌ خطأ في إنشاء الطلب: $e');
+      debugPrint('❌ خطأ حرج في إنشاء الطلب وإرساله لـ Supabase: $e');
     }
   }
 
