@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_state.dart';
 import '../utils/constants.dart';
 
 class DeliveryDashboard extends StatefulWidget {
@@ -16,10 +18,18 @@ class DeliveryDashboard extends StatefulWidget {
 }
 
 class _DeliveryDashboardState extends State<DeliveryDashboard> {
-  String _status = 'available'; // available, busy, offline
+  String _status = 'available';
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    final allOrders = appState.orders;
+
+    final courierOrders = allOrders.where((order) {
+      String assigned = order['assigned_courier']?.toString().trim() ?? '';
+      return assigned == widget.courierName.trim() || assigned == widget.courierId;
+    }).toList();
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -66,21 +76,9 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
                           selectedForegroundColor: Colors.black,
                         ),
                         segments: const [
-                          ButtonSegment(
-                            value: 'available', 
-                            label: Text('متاح', style: TextStyle(fontWeight: FontWeight.bold)),
-                            icon: Icon(Icons.check_circle_outline, size: 16),
-                          ),
-                          ButtonSegment(
-                            value: 'busy', 
-                            label: Text('مشغول', style: TextStyle(fontWeight: FontWeight.bold)),
-                            icon: Icon(Icons.hourglass_empty, size: 16),
-                          ),
-                          ButtonSegment(
-                            value: 'offline', 
-                            label: Text('خارج الخدمة', style: TextStyle(fontWeight: FontWeight.bold)),
-                            icon: Icon(Icons.offline_bolt_outlined, size: 16),
-                          ),
+                          ButtonSegment(value: 'available', label: Text('متاح', style: TextStyle(fontWeight: FontWeight.bold)), icon: Icon(Icons.check_circle_outline, size: 16)),
+                          ButtonSegment(value: 'busy', label: Text('مشغول', style: TextStyle(fontWeight: FontWeight.bold)), icon: Icon(Icons.hourglass_empty, size: 16)),
+                          ButtonSegment(value: 'offline', label: Text('خارج الخدمة', style: TextStyle(fontWeight: FontWeight.bold)), icon: Icon(Icons.offline_bolt_outlined, size: 16)),
                         ],
                         selected: {_status},
                         onSelectionChanged: (Set<String> newSelection) {
@@ -88,7 +86,7 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
                             _status = newSelection.first;
                           });
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('تم تحديث حالتك إلى: ${_status == 'available' ? 'متاح 🟢' : _status == 'busy' ? 'مشغول 🟡' : 'خارج الخدمة 🔴'}=')),
+                            SnackBar(content: Text('تم تحديث حالتك إلى: ${_status == 'available' ? 'متاح 🟢' : _status == 'busy' ? 'مشغول 🟡' : 'خارج الخدمة 🔴'}')),
                           );
                         },
                       ),
@@ -96,29 +94,102 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
                   ),
                 ),
               ),
-              const SizedBox(height: 25),
+              const SizedBox(height: 20),
+              const Align(
+                alignment: Alignment.centerRight,
+                child: Text('الطلبات المسندة إليك 📦', style: TextStyle(color: AppConstants.gold, fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 10),
               Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppConstants.gold.withOpacity(0.1),
-                          shape: BoxShape.circle,
+                child: courierOrders.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(color: AppConstants.gold.withOpacity(0.1), shape: BoxShape.circle),
+                              child: const Icon(Icons.local_shipping_outlined, size: 50, color: AppConstants.gold),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'لا توجد طلبات مسندة لك حالياً\nستظهر الطلبات هنا فور إرسالها من المشرف 🚀',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.local_shipping_outlined, size: 50, color: AppConstants.gold),
+                      )
+                    : ListView.builder(
+                        itemCount: courierOrders.length,
+                        itemBuilder: (context, index) {
+                          final order = courierOrders[index];
+                          final orderId = order['id']?.toString() ?? '';
+                          final customerName = order['customer_name']?.toString() ?? 'عميل';
+                          final phone = order['phone']?.toString() ?? '';
+                          final address = order['address']?.toString() ?? '';
+                          final itemsDesc = order['items_description']?.toString() ?? '';
+                          final totalPrice = order['total_price']?.toString() ?? '0';
+                          final status = order['status']?.toString() ?? '';
+
+                          return Card(
+                            color: const Color(0xFF1E1E1E),
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              side: BorderSide(color: AppConstants.gold.withOpacity(0.3)),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text('طلب #$orderId', style: const TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 15)),
+                                      Text('$totalPrice ر.ي', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                  const Divider(color: Colors.white12),
+                                  Text('العميل: $customerName', style: const TextStyle(color: Colors.white70)),
+                                  Text('الهاتف: $phone', style: const TextStyle(color: Colors.white70)),
+                                  Text('العنوان: $address', style: const TextStyle(color: Colors.white70)),
+                                  const SizedBox(height: 6),
+                                  Text('المنتجات: $itemsDesc', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                                  const SizedBox(height: 14),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      if (status == 'waitingCourierApproval')
+                                        ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                                          onPressed: () => appState.courierRespondToOrder(orderId, true),
+                                          icon: const Icon(Icons.check, size: 16),
+                                          label: const Text('قبول الطلب'),
+                                        ),
+                                      if (status == 'onTheWay')
+                                        ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
+                                          onPressed: () => appState.courierUpdateArrival(orderId),
+                                          icon: const Icon(Icons.location_pin, size: 16),
+                                          label: const Text('وصلت لموقع العميل'),
+                                        ),
+                                      if (status == 'arrived')
+                                        ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, foregroundColor: Colors.white),
+                                          onPressed: () => appState.markOrderDelivered(orderId),
+                                          icon: const Icon(Icons.done_all, size: 16),
+                                          label: const Text('تم التسليم بنجاح ✅'),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'الطلبات المسندة لك ستظهر هنا فور قبولها من المشرف 📦',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),
