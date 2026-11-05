@@ -14,7 +14,6 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  // جعلنا مجموعة التتبع داخل الـ State لكي تتحدث وتتفرغ بسلامة عند تغيير الحسابات
   final Set<String> _processedPricingOrders = {};
 
   @override
@@ -63,10 +62,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
     final paymentMethod = order is Map ? (order['payment_method']?.toString() ?? 'cash') : 'cash';
     final paymentAccount = order is Map ? (order['payment_account']?.toString() ?? '') : '';
     final paymentDisplay = paymentMethod == 'cash'
-        ? '💵 نقداً عند الاستلام'
+        ? '💵 نقداً عند الاستلاستلام'
         : '💳 محفظة ($paymentMethod) - حساب: $paymentAccount';
 
-    // فحص ذكي ومستقل لكل طلب ليظهر الشاشة المنبثقة بدقة متناهية
+    // ظهور الشاشة المنبثقة تلقائياً أول مرة
     if (status == 'pricingSentToCustomer' && !_processedPricingOrders.contains(orderId)) {
       _processedPricingOrders.add(orderId);
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -82,114 +81,150 @@ class _OrdersScreenState extends State<OrdersScreen> {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: AppConstants.gold.withOpacity(0.2)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('طلب #$orderId', style: const TextStyle(fontWeight: FontWeight.bold, color: AppConstants.gold, fontSize: 16)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        // 👈 التعديل الجوهري: إذا ضغط العميل على الكارت أو مكان الحالة وكان الطلب بانتظار التسعيرة، تفتح النافذة فوراً!
+        onTap: () {
+          if (status == 'pricingSentToCustomer') {
+            _showCustomerPricingDialog(context, appState, orderId, deliveryFee, totalPrice);
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('طلب #$orderId', style: const TextStyle(fontWeight: FontWeight.bold, color: AppConstants.gold, fontSize: 16)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(_getStatusText(status), style: const TextStyle(color: AppConstants.gold, fontSize: 11, fontWeight: FontWeight.bold)),
                   ),
-                  child: Text(_getStatusText(status), style: const TextStyle(color: AppConstants.gold, fontSize: 11, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-            const Divider(color: Colors.white12, height: 20),
-            Text('💰 الإجمالي: $totalPrice ر.ي', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 4),
-            Text('🛵 المندوب: $assignedCourier', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppConstants.gold,
-                  side: BorderSide(color: AppConstants.gold.withOpacity(0.5)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  builder: (dialogContext) => Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: AlertDialog(
-                      backgroundColor: const Color(0xFF1E1E1E),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      title: Text('تفاصيل الطلب #$orderId', style: const TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16)),
-                      content: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('مراحل الطلب:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.gold)),
-                            const SizedBox(height: 10),
-                            buildOrderStatusTimeline(status),
-                            const Divider(color: Colors.white12, height: 24),
-
-                            Text('الحالة الحالية: ${_getStatusText(status)}', style: const TextStyle(color: Colors.white, fontSize: 13)),
-                            if (adminMessage.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                                child: Text('ملاحظة الإدارة: $adminMessage', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
-                              ),
-                            ],
-                            const Divider(color: Colors.white12),
-                            Text('👤 العميل: $customerName', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                            Text('📞 الهاتف: $customerPhone', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                            Text('📍 العنوان: $address', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                            const Divider(color: Colors.white12),
-                            
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: paymentMethod == 'cash' ? Colors.green.withOpacity(0.15) : Colors.blue.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: paymentMethod == 'cash' ? Colors.green : Colors.blueAccent),
-                              ),
-                              child: Text(
-                                'طريقة الدفع: $paymentDisplay',
-                                style: TextStyle(
-                                  color: paymentMethod == 'cash' ? Colors.greenAccent : Colors.lightBlueAccent,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const Divider(color: Colors.white12),
-
-                            Text('🛒 تفاصيل المنتجات:\n$itemsDesc', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                            const Divider(color: Colors.white12),
-                            Text('سعر المنتجات: $productsTotal ر.ي', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                            Text('رسوم التوصيل: $deliveryFee ر.ي', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                            Text('الإجمالي الكلي: $totalPrice ر.ي', style: const TextStyle(fontWeight: FontWeight.bold, color: AppConstants.gold, fontSize: 14)),
-                            const SizedBox(height: 6),
-                            Text('المندوب المعين: $assignedCourier', style: const TextStyle(color: Colors.amberAccent, fontSize: 13)),
-                          ],
+                ],
+              ),
+              const Divider(color: Colors.white12, height: 20),
+              
+              // تنبيه تفاعلي يوضح للعميل أنه يمكنه الضغط هنا لإظهار نافذة الموافقة
+              if (status == 'pricingSentToCustomer') ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(8),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppConstants.gold.withOpacity(0.4)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.touch_app, color: AppConstants.gold, size: 16),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'اضغط هنا لفتح نافذة الموافقة على السعر واتخاذ القرار 👆',
+                          style: TextStyle(color: AppConstants.gold, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogContext), 
-                          child: const Text('إغلاق', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
-                icon: const Icon(Icons.info_outline, size: 16),
-                label: const Text('عرض التفاصيل الكاملة', style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+
+              Text('💰 الإجمالي: $totalPrice ر.ي', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(height: 4),
+              Text('🛵 المندوب: $assignedCourier', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppConstants.gold,
+                    side: BorderSide(color: AppConstants.gold.withOpacity(0.5)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (dialogContext) => Directionality(
+                      textDirection: TextDirection.rtl,
+                      child: AlertDialog(
+                        backgroundColor: const Color(0xFF1E1E1E),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: Text('تفاصيل الطلب #$orderId', style: const TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16)),
+                        content: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('مراحل الطلب:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.gold)),
+                              const SizedBox(height: 10),
+                              buildOrderStatusTimeline(status),
+                              const Divider(color: Colors.white12, height: 24),
+
+                              Text('الحالة الحالية: ${_getStatusText(status)}', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                              if (adminMessage.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                  child: Text('ملاحظة الإدارة: $adminMessage', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
+                                ),
+                              ],
+                              const Divider(color: Colors.white12),
+                              Text('👤 العميل: $customerName', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                              Text('📞 الهاتف: $customerPhone', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                              Text('📍 العنوان: $address', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                              const Divider(color: Colors.white12),
+                              
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: paymentMethod == 'cash' ? Colors.green.withOpacity(0.15) : Colors.blue.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: paymentMethod == 'cash' ? Colors.green : Colors.blueAccent),
+                                ),
+                                child: Text(
+                                  'طريقة الدفع: $paymentDisplay',
+                                  style: TextStyle(
+                                    color: paymentMethod == 'cash' ? Colors.greenAccent : Colors.lightBlueAccent,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const Divider(color: Colors.white12),
+
+                              Text('🛒 تفاصيل المنتجات:\n$itemsDesc', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                              const Divider(color: Colors.white12),
+                              Text('سعر المنتجات: $productsTotal ر.ي', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                              Text('رسوم التوصيل: $deliveryFee ر.ي', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                              Text('الإجمالي الكلي: $totalPrice ر.ي', style: const TextStyle(fontWeight: FontWeight.bold, color: AppConstants.gold, fontSize: 14)),
+                              const SizedBox(height: 6),
+                              Text('المندوب المعين: $assignedCourier', style: const TextStyle(color: Colors.amberAccent, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogContext), 
+                            child: const Text('إغلاق', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.info_outline, size: 16),
+                  label: const Text('عرض التفاصيل الكاملة', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
