@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import 'delivery_login_screen.dart';
-import 'customer/edit_profile_screen.dart'; // 👈 تصحيح مسار الاستيراد الصحيح للملف داخل مجلد customer
+import 'customer/edit_profile_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   final ValueChanged<int> onNavigate;
@@ -33,7 +33,8 @@ class AppDrawer extends StatelessWidget {
               user?.phone ?? 'لم يتم تسجيل رقم هاتف',
               style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),
-            accountPicture: const CircleAvatar(
+            // 💡 التصحيح هنا: استخدام currentAccountPicture بدلاً من accountPicture
+            currentAccountPicture: const CircleAvatar(
               backgroundColor: AppConstants.gold,
               child: Icon(Icons.person, color: Colors.black, size: 36),
             ),
