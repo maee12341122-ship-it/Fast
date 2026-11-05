@@ -29,7 +29,6 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    // 👈 استخدام الـ getter الصحيح إجمالي عناصر السلة المعتمد في AppState
     final cartCount = context.select<AppState, int>((state) => state.totalCartItemsCount);
     
     return Directionality(
