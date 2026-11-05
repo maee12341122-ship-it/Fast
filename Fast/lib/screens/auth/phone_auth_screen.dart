@@ -304,7 +304,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey.shade800),
                         ),
-                        focusedBorder: OutlineImportsBorder: OutlineInputBorder(
+                        // 👇 تم تصحيح الخطأ هنا بنجاح وتوليد السطر بشكل نظيف 100%
+                        focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(color: primaryGold, width: 2),
                         ),
