@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../providers/app_state.dart';
 
 class PhoneAuthScreen extends StatefulWidget {
@@ -20,6 +21,24 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   bool _isOtpSent = false;
   bool _isProfileStep = false;
   bool _isLoading = false;
+
+  // إحداثيات تعز الافتراضية للخرائط
+  static const LatLng _taizCenter = LatLng(13.5779, 44.0192);
+  GoogleMapController? _mapController;
+  LatLng _selectedLocation = _taizCenter;
+  Set<Marker> _markers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _markers.add(
+      const Marker(
+        markerId: MarkerId('selected_location'),
+        position: _taizCenter,
+        infoWindow: InfoWindow(title: 'موقع التوصيل - تعز'),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -50,7 +69,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           title: const Text(
-            'تعز إكسبرس - بوابة المصادقة',
+            'تعز إكسبرس - بوابة المصادقة والخرائط',
             style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
@@ -81,14 +100,14 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.shield_outlined,
+                      Icons.map_outlined,
                       size: 50,
                       color: primaryGold,
                     ),
                   ),
                   const SizedBox(height: 20),
 
-                  // ---------------- المرحلة الأولى: إدخال رقم الهاتف ----------------
+                  // ---------------- المرحلة الأولى: إدخال رقم الهاتف مع الفحص الذكي ----------------
                   if (!_isOtpSent && !_isProfileStep) ...[
                     const Text(
                       'تسجيل الدخول / حساب جديد',
@@ -96,7 +115,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'أدخل رقم هاتفك لتلقي رمز التحقق عبر الواتساب',
+                      'أدخل رقم هاتفك للتحقق أو استرجاع بياناتك المسجلة مسبقاً',
                       style: TextStyle(color: Colors.grey, fontSize: 13),
                       textAlign: TextAlign.center,
                     ),
@@ -106,7 +125,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       keyboardType: TextInputType.phone,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        labelText: 'رقم الهاتف', // تم إزالة التلميح المزعج بناءً على طلبك
+                        labelText: 'رقم الهاتف',
                         labelStyle: const TextStyle(color: Colors.grey),
                         prefixIcon: const Icon(Icons.phone_android, color: primaryGold),
                         filled: true,
@@ -139,27 +158,41 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                                 return;
                               }
                               setState(() => _isLoading = true);
-                              
-                              // توليد وطلب الرمز عبر الواتساب المباشر wa.me
-                              appState.requestOtpForPhone(phone);
-                              await appState.sendOtpViaWhatsAppDirect(phone);
 
-                              setState(() {
-                                _isLoading = false;
-                                _isOtpSent = true;
-                              });
+                              // فحص العميل وجلب بياناته القديمة إن وجدت دون مسحها
+                              bool exists = await appState.checkAndLoginCustomer(phone);
 
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('تم فتح الواتساب لإرسال رمز التحقق بنجاح! 📲')),
-                              );
+                              if (exists && appState.userProfile != null) {
+                                setState(() {
+                                  _isLoading = false;
+                                  _nameController.text = appState.userProfile!['name'] ?? '';
+                                  _addressController.text = appState.userProfile!['address'] ?? '';
+                                  _isProfileStep = true;
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('تم العثور على حسابك السابق واسترجاع بياناتك بنجاح! ✅')),
+                                );
+                              } else {
+                                appState.requestOtpForPhone(phone);
+                                await appState.sendOtpViaWhatsAppDirect(phone);
+
+                                setState(() {
+                                  _isLoading = false;
+                                  _isOtpSent = true;
+                                });
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('تم فتح الواتساب لإرسال رمز التحقق بنجاح! 📲')),
+                                );
+                              }
                             },
                       child: _isLoading
                           ? const CircularProgressIndicator(color: Colors.black)
-                          : const Text('إرسال رمز التحقق عبر الواتساب', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
+                          : const Text('متابعة وتحقق', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
                   ]
 
-                  // ---------------- المرحلة الثانية: إدخال رمز الـ OTP مع التحقق الصارم ----------------
+                  // ---------------- المرحلة الثانية: إدخال رمز الـ OTP للعميل الجديد ----------------
                   else if (_isOtpSent && !_isProfileStep) ...[
                     const Text(
                       'أدخل رمز التحقق (OTP)',
@@ -202,8 +235,6 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       ),
                       onPressed: () {
                         final otp = _otpController.text.trim();
-                        
-                        // شرط صارم: يجب أن يكون الرمز 6 أرقام كاملة وصحيحة
                         if (otp.length < 6) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('الرجاء إدخال الرمز المكون من 6 أرقام كاملة ❌')),
@@ -232,15 +263,15 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                     ),
                   ]
 
-                  // ---------------- المرحلة الثالثة: إدخال الاسم والعنوان والحفظ ----------------
+                  // ---------------- المرحلة الثالثة: إدخال البيانات وتحديد الموقع عبر الخريطة ----------------
                   else if (_isProfileStep) ...[
                     const Text(
-                      'استكمال البيانات الشخصية',
+                      'استكمال وتأكيد البيانات الشخصية',
                       style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'يرجى إدخال اسمك وعنوانك في تعز لسهولة التوصيل',
+                      'تم جلب اسمك وعنوانك المسجل، يمكنك تحديثهما أو تحديد موقعك بدقة على الخريطة',
                       style: TextStyle(color: Colors.grey, fontSize: 13),
                       textAlign: TextAlign.center,
                     ),
@@ -284,6 +315,42 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    // 👈 خريطة جوجل `google_maps_flutter` لتحديد الموقع بدقة
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child: Text('حدد موقعك الجغرافي على الخريطة 🗺️:', style: TextStyle(color: primaryGold, fontWeight: FontWeight.bold, fontSize: 14)),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 200,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: GoogleMap(
+                          initialCameraPosition: const CameraPosition(target: _taizCenter, zoom: 15),
+                          mapType: MapType.normal,
+                          markers: _markers,
+                          myLocationEnabled: true,
+                          myLocationButtonEnabled: true,
+                          onMapCreated: (controller) => _mapController = controller,
+                          onTap: (LatLng position) {
+                            setState(() {
+                              _selectedLocation = position;
+                              _markers = {
+                                Marker(
+                                  markerId: const MarkerId('selected_location'),
+                                  position: position,
+                                  infoWindow: InfoWindow(
+                                    title: 'موقع التوصيل المحدد',
+                                    snippet: '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}',
+                                  ),
+                                ),
+                              };
+                            });
+                          },
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 25),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -293,9 +360,11 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       ),
                       onPressed: () async {
                         if (_nameController.text.trim().isNotEmpty && _addressController.text.trim().isNotEmpty) {
+                          String finalAddress = '${_addressController.text.trim()} [الإحداثيات: ${_selectedLocation.latitude.toStringAsFixed(4)}, ${_selectedLocation.longitude.toStringAsFixed(4)}]';
+                          
                           await appState.saveUserProfileDetails(
                             _nameController.text.trim(),
-                            _addressController.text.trim(),
+                            finalAddress,
                           );
                           await appState.requestLocationAndNotificationPermissions();
 
@@ -305,7 +374,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                             Navigator.pop(context);
                           }
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('أهلاً بك! تم تسجيل الدخول بنجاح 🎉')),
+                            const SnackBar(content: Text('أهلاً بك! تم حفظ البيانات وتسجيل الدخول بنجاح 🎉')),
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -313,7 +382,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                           );
                         }
                       },
-                      child: const Text('حفظ والدخول للتطبيق', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
+                      child: const Text('حفظ والدخول للتطبيق 🚀', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
                   ],
                 ],
