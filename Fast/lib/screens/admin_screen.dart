@@ -179,11 +179,7 @@ class _AdminScreenState extends State<AdminScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ChatScreen(
-                                orderId: orderId,
-                                userRole: 'admin',
-                                targetChat: 'admin_customer',
-                              ),
+                              builder: (_) => ChatScreen(orderId: orderId, userRole: 'admin', targetChat: 'admin_customer'),
                             ),
                           );
                         },
@@ -203,11 +199,7 @@ class _AdminScreenState extends State<AdminScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ChatScreen(
-                                orderId: orderId,
-                                userRole: 'admin',
-                                targetChat: 'admin_courier',
-                              ),
+                              builder: (_) => ChatScreen(orderId: orderId, userRole: 'admin', targetChat: 'admin_courier'),
                             ),
                           );
                         },
@@ -301,24 +293,11 @@ class _AdminScreenState extends State<AdminScreen> {
         children: [
           const Text('إضافة منتج جديد للمتجر', style: TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 15),
-          TextField(
-            controller: _productNameController,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(labelText: 'اسم المنتج', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder()),
-          ),
+          TextField(controller: _productNameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'اسم المنتج', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder())),
           const SizedBox(height: 12),
-          TextField(
-            controller: _restaurantNameController,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(labelText: 'اسم المتجر أو المطعم', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder()),
-          ),
+          TextField(controller: _restaurantNameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'اسم المتجر أو المطعم', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder())),
           const SizedBox(height: 12),
-          TextField(
-            controller: _priceController,
-            keyboardType: TextInputType.number,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(labelText: 'السعر (ر.ي)', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder()),
-          ),
+          TextField(controller: _priceController, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'السعر (ر.ي)', labelStyle: TextStyle(color: Colors.grey), filled: true, fillColor: Color(0xFF1E1E1E), border: OutlineInputBorder())),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             dropdownColor: const Color(0xFF1E1E1E),
@@ -366,25 +345,19 @@ class _AdminScreenState extends State<AdminScreen> {
           const Text('حسابات المناديب ومستحقات المشرف (20%)', style: TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           if (appState.couriers.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(child: Text('لا يوجد مناديب مسجلين حالياً', style: TextStyle(color: Colors.grey))),
-            )
+            const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Center(child: Text('لا يوجد مناديب مسجلين حالياً', style: TextStyle(color: Colors.grey))))
           else
             ...appState.couriers.map((courier) {
               final courierName = courier['name'].toString();
               double totalDeliveryFees = 0.0;
               int completedOrdersCount = 0;
-
               for (var order in appState.orders) {
                 if (order['assigned_courier'] == courierName && order['status'] == 'delivered') {
                   completedOrdersCount++;
                   totalDeliveryFees += double.tryParse(order['delivery_fee']?.toString() ?? '0') ?? 0.0;
                 }
               }
-
               double adminCommission = totalDeliveryFees * 0.20;
-
               return Card(
                 color: const Color(0xFF1E1E1E),
                 margin: const EdgeInsets.symmetric(vertical: 6),
