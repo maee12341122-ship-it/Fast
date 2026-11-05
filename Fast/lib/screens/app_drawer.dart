@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import 'delivery_login_screen.dart';
-import 'edit_profile_screen.dart';
+import 'customer/edit_profile_screen.dart'; // 👈 تصحيح مسار الاستيراد الصحيح للملف داخل مجلد customer
 
 class AppDrawer extends StatelessWidget {
   final ValueChanged<int> onNavigate;
@@ -26,14 +26,14 @@ class AppDrawer extends StatelessWidget {
               color: Color(0xFF1E1E1E),
             ),
             accountName: Text(
-              user?.name ?? 'زائر تعز إكسبرس',
-              style: const TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16),
+              user?.name ?? 'زائر FAST تعز',
+              style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16),
             ),
             accountEmail: Text(
               user?.phone ?? 'لم يتم تسجيل رقم هاتف',
               style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),
-            currentAccountPicture: const CircleAvatar(
+            accountPicture: const CircleAvatar(
               backgroundColor: AppConstants.gold,
               child: Icon(Icons.person, color: Colors.black, size: 36),
             ),
@@ -62,19 +62,19 @@ class AppDrawer extends StatelessWidget {
           _item(context, Icons.privacy_tip_outlined, 'سياسة الخصوصية', () {
             Navigator.pop(context);
             _showTextDialog(context, 'سياسة الخصوصية',
-                'في نسخة المرحلة الأولى تُحفظ بيانات التجربة محلياً على الجهاز. لا توجد مزامنة سحابية أو نظام صلاحيات خادمي بعد.');
+                'في نسخة المرحلة الأولى تُحفظ بيانات التجربة محلياً على الجهاز أو سحابياً عبر سوبابيس.');
           }),
           _item(context, Icons.share, 'مشاركة التطبيق', () async {
-            await Clipboard.setData(const ClipboardData(text: 'تعز إكسبرس - Taiz Express'));
+            await Clipboard.setData(const ClipboardData(text: 'تطبيق FAST - أسرع خدمة توصيل في تعز 🚀'));
             if (context.mounted) {
               Navigator.pop(context);
-              _showMessage(context, 'تم نسخ اسم التطبيق بنجاح! 🚀');
+              _showMessage(context, 'تم نسخ رابط ورسالة التطبيق بنجاح! 🚀');
             }
           }),
           _item(context, Icons.info_outline, 'نبذة عن التطبيق', () {
             Navigator.pop(context);
-            _showTextDialog(context, 'عن تعز إكسبرس',
-                'تعز إكسبرس تطبيق توصيل تجريبي يجمع المطاعم والبقالات والخضار والفواكه والصيدلية والطلبات الخاصة في واجهة واحدة.');
+            _showTextDialog(context, 'عن تطبيق FAST',
+                'تطبيق FAST تطبيق توصيل رائد في تعز يجمع المطاعم والبقالات والصيدليات والطلبات الخاصة في واجهة واحدة متكاملة.');
           }),
           
           const Divider(color: Colors.white12, height: 20),
@@ -89,7 +89,7 @@ class AppDrawer extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.all(16),
             child: Text(
-              'الإصدار: 2.1.0\nTaiz Express • المرحلة الأولى',
+              'الإصدار: 2.2.0\nFAST • تعز، اليمن',
               style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ),
@@ -113,7 +113,7 @@ class AppDrawer extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('اختر مظهر التطبيق', style: TextStyle(color: AppConstants.gold)),
+        title: Text('اختر مظهر التطبيق', style: TextStyle(color: AppConstants.gold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -148,12 +148,12 @@ class AppDrawer extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: Text(title, style: const TextStyle(color: AppConstants.gold)),
+        title: Text(title, style: TextStyle(color: AppConstants.gold)),
         content: Text(message, style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext), 
-            child: const Text('إغلاق', style: TextStyle(color: AppConstants.gold)),
+            child: Text('إغلاق', style: TextStyle(color: AppConstants.gold)),
           ),
         ],
       ),
