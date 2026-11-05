@@ -40,11 +40,11 @@ class _MainShellState extends State<MainShell> {
         drawer: AppDrawer(onNavigate: _navigateTo),
         body: IndexedStack(
           index: _currentIndex,
-          children: [
-            HomeScreen(onOpenDrawer: _openDrawer),
-            CartScreen(onOpenDrawer: _openDrawer),
-            OrdersScreen(onOpenDrawer: _openDrawer),
-            ProfileScreen(onOpenDrawer: _openDrawer),
+          children: const [
+            HomeScreen(),
+            CartScreen(),
+            OrdersScreen(),
+            ProfileScreen(),
           ],
         ),
         bottomNavigationBar: NavigationBar(
