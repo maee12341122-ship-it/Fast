@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import '../../utils/constants.dart'; // 👈 تصحيح مسار الاستيراد للصعود مستويين
+import '../../utils/constants.dart'; // 👈 مسار الاستيراد الصحيح
 
 class MapLocationScreen extends StatefulWidget {
   const MapLocationScreen({Key? key}) : super(key: key);
@@ -44,9 +44,9 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
         }
       }
 
-      // 💡 تم تحديث الاستدعاء ليتوافق مع أحدث إصدارات مكتبة geolocator بدون أخطاء
+      // جلب الموقع بدقة عالية
       Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        desiredAccuracy: LocationAccuracy.high,
       );
 
       LatLng currentLatLng = LatLng(position.latitude, position.longitude);
@@ -77,7 +77,6 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
         backgroundColor: backgroundColor,
         appBar: AppBar(
           backgroundColor: cardColor,
-          // 💡 إزالة const لتجنب خطأ Not a constant expression مع AppConstants.gold
           title: Text('حدد موقع منزلك على خريطة جوجل', style: TextStyle(color: AppConstants.gold, fontSize: 15, fontWeight: FontWeight.bold)),
           leading: IconButton(
             icon: Icon(Icons.arrow_forward, color: AppConstants.gold),
@@ -86,7 +85,6 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
         ),
         body: Stack(
           children: [
-            // خريطة جوجل الحقيقية
             GoogleMap(
               initialCameraPosition: const CameraPosition(
                 target: _taizDefault,
@@ -105,16 +103,12 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                 });
               },
             ),
-
-            // دبوس التحديد الثابت في منتصف الخريطة (لتحديد المنزل)
             const Center(
               child: Padding(
                 padding: EdgeInsets.only(bottom: 40),
                 child: Icon(Icons.location_pin, size: 55, color: Colors.redAccent),
               ),
             ),
-
-            // زر تحديد الموقع الحالي (GPS)
             Positioned(
               top: 20,
               left: 20,
@@ -126,8 +120,6 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                 onPressed: _determinePosition,
               ),
             ),
-
-            // شريط العنوان السفلي مع زر التثبيت
             Positioned(
               bottom: 20,
               left: 20,
@@ -164,7 +156,6 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () {
-                        // إرجاع العنوان والموقع المختار عند النقر
                         Navigator.pop(context, _selectedAddressName);
                       },
                       child: const Text('تثبيت هذا الموقع وعودة', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
