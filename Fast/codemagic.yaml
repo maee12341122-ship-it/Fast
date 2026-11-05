@@ -1,11 +1,11 @@
 workflows:
-  taiz-express-android-apk:
-    name: Taiz Express - Android APK
+  fast-taiz-android-apk:
+    name: FAST Delivery - Android APK 🚀
     max_build_duration: 90
     environment:
       flutter: stable
       vars:
-        PACKAGE_NAME: "com.taizexpress.taiz_express"
+        PACKAGE_NAME: "com.fast.taiz"
     cache:
       cache_paths:
         - ~/.pub-cache
@@ -22,7 +22,7 @@ workflows:
           set -e
           if [ ! -f android/gradle/wrapper/gradle-wrapper.jar ]; then
             SEED_DIR="$(mktemp -d)"
-            flutter create --platforms=android --org com.taizexpress --project-name taiz_express "$SEED_DIR/seed"
+            flutter create --platforms=android --org com.fast --project-name fast "$SEED_DIR/seed"
             mkdir -p android/gradle/wrapper
             cp "$SEED_DIR/seed/android/gradlew" android/gradlew
             cp "$SEED_DIR/seed/android/gradlew.bat" android/gradlew.bat
