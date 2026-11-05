@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
+import 'map_location_screen.dart'; // 👈 استدعاء شاشة الخريطة التفاعلية
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -22,8 +24,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final profile = appState.userProfile;
 
     _nameController = TextEditingController(text: profile?['name'] ?? '');
-    _phoneController = TextEditingController(text: profile?['phone'] ?? '734910250');
-    _addressController = TextEditingController(text: profile?['address'] ?? 'ديليكس');
+    _phoneController = TextEditingController(text: profile?['phone'] ?? '');
+    _addressController = TextEditingController(text: profile?['address'] ?? 'تعز - ديلوكس');
   }
 
   @override
@@ -36,129 +38,169 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('تعديل الحساب', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // حقل الاسم الشخصي
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'الاسم الشخصي',
-                prefixIcon: const Icon(Icons.person, color: AppConstants.gold),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-            const SizedBox(height: 15),
-
-            // حقل رقم الهاتف (غير قابل للتعديل أو أساسي)
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: 'رقم الهاتف',
-                prefixIcon: const Icon(Icons.phone, color: AppConstants.gold),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-            const SizedBox(height: 15),
-
-            // حقل العنوان التفصيلي
-            TextField(
-              controller: _addressController,
-              decoration: InputDecoration(
-                labelText: 'العنوان (مثال: ديلوكس، العصيفرة...)',
-                prefixIcon: const Icon(Icons.home, color: AppConstants.gold),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // قسم الخريطة المصغرة لتحديد الموقع
-            const Text(
-              'تحديد الموقع على الخريطة',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppConstants.gold),
-            ),
-            const SizedBox(height: 5),
-            const Text(
-              'في حال اختلاف موقعك الحالي عن موقع التوصيل، يرجى تحديد الموقع الخاص بك.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 10),
-
-            // تصميم عنصر خريطة وهمية تفاعلية (أو مكان خريطة جوجل)
-            Container(
-              height: 220,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                border: Border.all(color: AppConstants.gold, width: 1.5),
-                borderRadius: BorderRadius.circular(12),
-                image: const DecorationImage(
-                  image: AssetImage('assets/images/map_placeholder.png'), // أو صورة خريطة افتراضية
-                  fit: BoxFit.cover,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF121212),
+        appBar: AppBar(
+          title: const Text('تعديل الحساب الشخصي ⚙️', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold)),
+          backgroundColor: const Color(0xFF1E1E1E),
+          iconTheme: const IconThemeData(color: AppConstants.gold),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // حقل الاسم الشخصي
+              TextField(
+                controller: _nameController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'الاسم الشخصي',
+                  labelStyle: const TextStyle(color: Colors.grey),
+                  prefixIcon: const Icon(Icons.person, color: AppConstants.gold),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: const Color(0xFF1E1E1E),
                 ),
-                color: Colors.grey[900],
               ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.location_pin, size: 50, color: Colors.red),
-                  Positioned(
-                    bottom: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'انقر لتحديد الموقع بدقة على الخريطة 📍',
-                        style: TextStyle(fontSize: 11, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
+              const SizedBox(height: 15),
 
-            // زر الحفظ بتصميم جذاب مطابق للصورة
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.gold,
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              // حقل رقم الهاتف
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'رقم الهاتف',
+                  labelStyle: const TextStyle(color: Colors.grey),
+                  prefixIcon: const Icon(Icons.phone, color: AppConstants.gold),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: const Color(0xFF1E1E1E),
                 ),
-                onPressed: () async {
-                  // حفظ البيانات في الـ AppState وقاعدة البيانات
-                  await context.read<AppState>().saveUserProfileDetails(
-                    _nameController.text.trim(),
-                    _addressController.text.trim(),
+              ),
+              const SizedBox(height: 15),
+
+              // حقل العنوان التفصيلي
+              TextField(
+                controller: _addressController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'العنوان (مثال: ديلوكس، شارع جمال...)',
+                  labelStyle: const TextStyle(color: Colors.grey),
+                  prefixIcon: const Icon(Icons.home, color: AppConstants.gold),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: const Color(0xFF1E1E1E),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // قسم الخريطة التفاعلية لتحديد الموقع بدقة
+              const Text(
+                'تحديد الموقع الجغرافي على الخريطة 🗺️',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppConstants.gold),
+              ),
+              const SizedBox(height: 5),
+              const Text(
+                'انقر على الخريطة أدناه لفتح خريطة جوجل وتحديد موقع منزلك أو نقطة التوصيل بدقة.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 10),
+
+              // 👈 عنصر خريطة تفاعلي ينقل المستخدم إلى MapLocationScreen عند النقر
+              GestureDetector(
+                onTap: () async {
+                  // الانتقال إلى شاشة خريطة جوجل واستقبال العنوان المختار عند العودة
+                  final selectedAddress = await Navigator.push<String>(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MapLocationScreen()),
                   );
 
-                  // العودة للصفحة السابقة مع إشعار نجاح
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تم حفظ وتحديث بيانات الحساب بنجاح! ✅')),
-                  );
+                  if (selectedAddress != null && selectedAddress.isNotEmpty) {
+                    setState(() {
+                      _addressController.text = selectedAddress;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تم تحديث العنوان الإحداثي بنجاح! 📍')),
+                    );
+                  }
                 },
-                child: const Text(
-                  'حفظ',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                child: Container(
+                  height: 200,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppConstants.gold, width: 1.5),
+                    borderRadius: BorderRadius.circular(16),
+                    color: const Color(0xFF1E1E1E),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.map, size: 50, color: AppConstants.gold),
+                          SizedBox(height: 8),
+                          Text(
+                            'اضغط هنا لفتح خريطة جوجل التفاعلية 📍',
+                            style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                      Positioned(
+                        bottom: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black87,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppConstants.gold.withOpacity(0.5)),
+                          ),
+                          child: const Text(
+                            'تحديد الدبوس على موقعك في تعز',
+                            style: TextStyle(fontSize: 11, color: AppConstants.gold, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 30),
+
+              // زر الحفظ بتصميم جذاب
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppConstants.gold,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () async {
+                    // حفظ البيانات في الـ AppState وقاعدة البيانات سوبابيس
+                    await context.read<AppState>().saveUserProfileDetails(
+                      _nameController.text.trim(),
+                      _addressController.text.trim(),
+                    );
+
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تم حفظ وتحديث بيانات الحساب بنجاح! ✅')),
+                    );
+                  },
+                  child: const Text(
+                    'حفظ التعديلات 🚀',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
