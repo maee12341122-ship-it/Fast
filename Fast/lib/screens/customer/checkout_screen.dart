@@ -17,6 +17,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressDescriptionController = TextEditingController();
+  final _paymentAccountController = TextEditingController();
+
+  // 👈 متغير لتخزين طريقة الدفع المختارة (نقدي افتراضياً أو محافظ إلكترونية)
+  String _selectedPaymentMethod = 'cash'; // cash, al_kuraimi, al_qutaibi, mobile_money
 
   // إحداثيات افتراضية لمدينة تعز (مركز المدينة)
   LatLng _selectedLocation = const LatLng(13.5779, 44.0219);
@@ -41,6 +45,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _addressDescriptionController.dispose();
+    _paymentAccountController.dispose();
     super.dispose();
   }
 
@@ -118,7 +123,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[100],
         appBar: AppBar(
           backgroundColor: cardBg,
-          title: const Text('تأكيد الطلب وتحديد الموقع', style: TextStyle(color: Colors.amber, fontSize: 16)),
+          title: const Text('تأكيد الطلب وتحديد الموقع 🚀', style: TextStyle(color: Colors.amber, fontSize: 16)),
           iconTheme: const IconThemeData(color: Colors.amber),
         ),
         body: ListView(
@@ -173,6 +178,60 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // 👈 قسم اختيار طريقة الدفع (نقدي أو محافظ إلكترونية مع رقم الحساب)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('طريقة الدفع 💳', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: _selectedPaymentMethod,
+                    dropdownColor: cardBg,
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: isDark ? const Color(0xFF121212) : Colors.grey[100],
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'cash', child: Text('💵 الدفع نقداً عند الاستلام')),
+                      DropdownMenuItem(value: 'Al-Kuraimi', child: Text('🏦 بنك الكريمي للتمويل الأصغر')),
+                      DropdownMenuItem(value: 'Al-Qutaibi', child: Text('💳 صرافة القطيبي لحظي')),
+                      DropdownMenuItem(value: 'Mobile Money', child: Text('📱 موبايل موني / ام بيشى')),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedPaymentMethod = val ?? 'cash';
+                      });
+                    },
+                  ),
+                  if (_selectedPaymentMethod != 'cash') ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _paymentAccountController,
+                      keyboardType: TextInputType.text,
+                      style: TextStyle(color: textColor),
+                      decoration: InputDecoration(
+                        labelText: 'رقم الحساب / الجوال المحول منه',
+                        labelStyle: const TextStyle(color: Colors.grey),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF121212) : Colors.grey[100],
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -249,7 +308,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween, // تم تصحيحها هنا
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('إجمالي المنتجات:', style: TextStyle(color: textColor, fontSize: 15)),
                   Text('${appState.totalAmount} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16)),
@@ -273,13 +332,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   return;
                 }
 
+                if (_selectedPaymentMethod != 'cash' && _paymentAccountController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('الرجاء إدخال رقم الحساب المحول منه للمحفظة الإلكترونية')),
+                  );
+                  return;
+                }
+
                 // دمج الوصف النصي مع الإحداثيات الجغرافية كعنوان متكامل
                 final fullAddress = '${_addressDescriptionController.text} (الإحداثيات: ${_selectedLocation.latitude.toStringAsFixed(4)}, ${_selectedLocation.longitude.toStringAsFixed(4)})';
 
                 // وصف المنتجات في السلة
                 final itemsDesc = appState.cartItems.map((item) => '${item.name} (x${item.quantity})').join(', ');
 
-                // حفظ ملف العميل وإرسال الطلب إلى Supabase مباشرة
+                // حفظ ملف العميل وإرسال الطلب إلى Supabase مباشرة مع تفاصيل الدفع
                 await appState.saveUserProfileDetails(_nameController.text, fullAddress);
                 await appState.createOrder(
                   customerName: _nameController.text,
@@ -287,6 +353,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   address: fullAddress,
                   itemsDesc: itemsDesc,
                   productsTotal: appState.totalAmount,
+                  paymentMethod: _selectedPaymentMethod,
+                  paymentAccount: _paymentAccountController.text.trim(),
                 );
 
                 if (context.mounted) {
