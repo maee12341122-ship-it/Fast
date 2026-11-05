@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geolocator/geolocator.dart';
-import '../../utils/constants.dart'; // 👈 مسار الاستيراد الصحيح
+import 'package:url_launcher/url_launcher.dart';
+import '../../utils/constants.dart';
 
 class MapLocationScreen extends StatefulWidget {
   const MapLocationScreen({Key? key}) : super(key: key);
@@ -11,59 +10,26 @@ class MapLocationScreen extends StatefulWidget {
 }
 
 class _MapLocationScreenState extends State<MapLocationScreen> {
-  GoogleMapController? _controller;
-  
-  // إحداثيات تعز الافتراضية (منطقة ديلوكس / شارع جمال)
-  static const LatLng _taizDefault = LatLng(13.5779, 44.0219);
-  LatLng _selectedLatLng = _taizDefault;
-  String _selectedAddressName = 'تعز - ديلوكس / بجوار الشارع العام';
-  bool _isLoadingGps = false;
+  final TextEditingController _customAddressController = TextEditingController(text: 'تعز - ديلوكس / بجوار الشارع العام');
 
-  @override
-  void initState() {
-    super.initState();
-    _determinePosition();
+  // دالة لفتح متصفح الخرائط لمساعدة المستخدم في جلب إحداثياته أو مكانه
+  Future<void> _openGoogleMapsSearch() async {
+    final Uri url = Uri.parse('https://www.google.com/maps/@13.5779,44.0219,15z');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح متصفح الخرائط')),
+        );
+      }
+    }
   }
 
-  // جلب الموقع الحالي عبر الـ GPS
-  Future<void> _determinePosition() async {
-    setState(() => _isLoadingGps = true);
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        setState(() => _isLoadingGps = false);
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          setState(() => _isLoadingGps = false);
-          return;
-        }
-      }
-
-      // جلب الموقع بدقة عالية
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      LatLng currentLatLng = LatLng(position.latitude, position.longitude);
-      setState(() {
-        _selectedLatLng = currentLatLng;
-        _selectedAddressName = 'موقعي الحالي (تعز)';
-        _isLoadingGps = false;
-      });
-
-      _controller?.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: currentLatLng, zoom: 16.5),
-        ),
-      );
-    } catch (e) {
-      setState(() => _isLoadingGps = false);
-    }
+  @override
+  void dispose() {
+    _customAddressController.dispose();
+    super.dispose();
   }
 
   @override
@@ -77,94 +43,78 @@ class _MapLocationScreenState extends State<MapLocationScreen> {
         backgroundColor: backgroundColor,
         appBar: AppBar(
           backgroundColor: cardColor,
-          title: Text('حدد موقع منزلك على خريطة جوجل', style: TextStyle(color: AppConstants.gold, fontSize: 15, fontWeight: FontWeight.bold)),
+          title: Text('تحديد موقع التوصيل في تعز 📍', style: TextStyle(color: AppConstants.gold, fontSize: 15, fontWeight: FontWeight.bold)),
           leading: IconButton(
             icon: Icon(Icons.arrow_forward, color: AppConstants.gold),
-            onPressed: () => Navigator.pop(context, _selectedAddressName),
+            onPressed: () => Navigator.pop(context, _customAddressController.text.trim()),
           ),
         ),
-        body: Stack(
-          children: [
-            GoogleMap(
-              initialCameraPosition: const CameraPosition(
-                target: _taizDefault,
-                zoom: 15.0,
-              ),
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              onMapCreated: (GoogleMapController controller) {
-                _controller = controller;
-              },
-              onCameraMove: (CameraPosition position) {
-                setState(() {
-                  _selectedLatLng = position.target;
-                  _selectedAddressName = 'تعز (خط عرض: ${_selectedLatLng.latitude.toStringAsFixed(4)}, خط طول: ${_selectedLatLng.longitude.toStringAsFixed(4)})';
-                });
-              },
-            ),
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: 40),
-                child: Icon(Icons.location_pin, size: 55, color: Colors.redAccent),
-              ),
-            ),
-            Positioned(
-              top: 20,
-              left: 20,
-              child: FloatingActionButton(
-                backgroundColor: cardColor,
-                child: _isLoadingGps 
-                    ? CircularProgressIndicator(color: AppConstants.gold) 
-                    : Icon(Icons.my_location, color: AppConstants.gold),
-                onPressed: _determinePosition,
-              ),
-            ),
-            Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(15),
+        body: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: cardColor,
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: AppConstants.gold.withOpacity(0.4)),
-                  boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10)],
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppConstants.gold.withOpacity(0.3)),
                 ),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.home, color: AppConstants.gold),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _selectedAddressName,
-                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    const Text(
+                      'أكتب عنوانك التفصيلي بدقة:',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                     ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppConstants.gold,
-                        minimumSize: const Size(double.infinity, 45),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _customAddressController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'مثال: تعز - ححي الروضة، قرب الشارع العام',
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        filled: true,
+                        fillColor: backgroundColor,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: Icon(Icons.location_on, color: AppConstants.gold),
                       ),
-                      onPressed: () {
-                        Navigator.pop(context, _selectedAddressName);
-                      },
-                      child: const Text('تثبيت هذا الموقع وعودة', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              
+              // زر لفتح خرائط جوجل الخارجية للاستعانة بها
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppConstants.gold),
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: Icon(Icons.map, color: AppConstants.gold),
+                label: Text('فتح خرائط جوجل للاستدلال 🗺️', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold)),
+                onPressed: _openGoogleMapsSearch,
+              ),
+              
+              const Spacer(),
+
+              // زر الحفظ النهائي والعودة
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.gold,
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Navigator.pop(context, _customAddressController.text.trim());
+                },
+                child: const Text('تثبيت العنوان والعودة ✅', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+            ],
+          ),
         ),
       ),
     );
