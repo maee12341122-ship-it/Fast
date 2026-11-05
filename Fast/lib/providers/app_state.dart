@@ -24,7 +24,6 @@ class AppState extends ChangeNotifier {
     listenToStoreSettingsRealtime();
   }
 
-  // --- إعدادات أوقات الدوام والدعم ---
   int startHour = 8;
   int endHour = 24;
   String customerSupportPhone = '770000000';
@@ -44,7 +43,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إدارة رسائل الشات اللحظية المعزولة ---
+  // --- إدارة الشات ---
   Stream getMessagesForOrder(dynamic orderId, String targetChat) {
     return supabase
         .from('messages')
@@ -55,49 +54,38 @@ class AppState extends ChangeNotifier {
 
   Future<void> sendChatMessage(dynamic orderId, String senderRole, String targetChat, String messageText) async {
     if (messageText.trim().isEmpty) return;
-
     final newMessage = {
       'order_id': orderId,
       'sender_type': senderRole,
       'target_chat': targetChat,
       'message_text': messageText,
     };
-
     try {
       await supabase.from('messages').insert(newMessage);
-      debugPrint('✅ تم إرسال الرسالة بنجاح');
     } catch (e) {
       debugPrint('❌ خطأ في إرسال رسالة الشات: $e');
     }
   }
 
-  // --- إرسال رمز التحقق عبر الواتساب ---
   Future<void> sendOtpViaWhatsAppDirect(String phone) async {
     if (generatedDynamicOtp == null) return;
-
     String formattedPhone = phone.trim();
     if (formattedPhone.startsWith('0')) {
       formattedPhone = '967${formattedPhone.substring(1)}';
     } else if (!formattedPhone.startsWith('967')) {
       formattedPhone = '967$formattedPhone';
     }
-
-    final message = Uri.encodeComponent(
-        'مرحباً، رمز التحقق الخاص بك لتطبيق FAST هو: $generatedDynamicOtp'
-    );
-
+    final message = Uri.encodeComponent('مرحباً، رمز التحقق الخاص بك لتطبيق FAST هو: $generatedDynamicOtp');
     final whatsappUrl = Uri.parse("https://wa.me/$formattedPhone?text=$message");
-
     try {
       if (await canLaunchUrl(whatsappUrl)) {
         await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
       }
     } catch (e) {
-      debugPrint('❌ خطأ في فتح تطبيق الواتساب: $e');
+      debugPrint('❌ خطأ في فتح الواتساب: $e');
     }
   }
 
-  // --- مشاركة التطبيق ---
   void shareApp() {
     Share.share(
       'حمل تطبيق FAST - أسرع خدمة توصيل في تعز! 🚀\nhttps://play.google.com/store/apps/details?id=com.fast.taiz',
@@ -105,34 +93,21 @@ class AppState extends ChangeNotifier {
     );
   }
 
-  // 👈 تسلسل طلب الأذونات: الموقع أولاً ثم الإشعارات ثانياً
   Future<void> requestLocationAndNotificationPermissions() async {
     try {
       LocationPermission locationPermission = await Geolocator.checkPermission();
       if (locationPermission == LocationPermission.denied) {
         locationPermission = await Geolocator.requestPermission();
       }
-
-      if (locationPermission == LocationPermission.deniedForever) {
-        debugPrint('⚠️ إذن الموقع مرفوض نهائياً من إعدادات الهاتف');
-      } else {
-        debugPrint('📍 تم التعامل مع إذن الموقع بنجاح');
-      }
-
       bool notificationGranted = await NotificationService.requestNotificationPermission();
       if (notificationGranted) {
-        debugPrint('🔔 تم منح إذن الإشعارات بنجاح');
         addNotification('تطبيق FAST - تعز', 'تم تفعيل الإشعارات وتحديد الموقع بنجاح 🚀');
-      } else {
-        debugPrint('⚠️ تم رفض إذن الإشعارات');
       }
-
     } catch (e) {
-      debugPrint('❌ خطأ في طلب الأذونات المتسلسلة: $e');
+      debugPrint('❌ خطأ في طلب الأذونات: $e');
     }
   }
 
-  // --- إعدادات المتجر ---
   Future<void> fetchStoreSettings() async {
     try {
       final response = await supabase.from('settings').select().maybeSingle();
@@ -142,7 +117,7 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('⚠️ خطأ في جلب إعدادات الدوام: $e');
+      debugPrint('⚠️ خطأ في إعدادات الدوام: $e');
     }
   }
 
@@ -164,13 +139,8 @@ class AppState extends ChangeNotifier {
     startHour = start;
     endHour = end;
     notifyListeners();
-
     try {
-      await supabase.from('settings').upsert({
-        'id': 1,
-        'start_hour': start,
-        'end_hour': end,
-      });
+      await supabase.from('settings').upsert({'id': 1, 'start_hour': start, 'end_hour': end});
     } catch (e) {
       debugPrint('❌ خطأ في حفظ أوقات الدوام: $e');
     }
@@ -186,7 +156,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- جلسة المشرف ---
+  // --- المشرف ---
   bool isAdminLoggedIn = false;
 
   void _loadAdminSession() async {
@@ -204,14 +174,11 @@ class AppState extends ChangeNotifier {
         notifyListeners();
         return true;
       }
-
       final response = await supabase.from('admins').select();
       if (response != null && response is List) {
         for (var admin in response) {
           String dbUsername = admin['username']?.toString().trim() ?? '';
-          String dbPassword = admin['password_hash']?.toString().trim() ??
-              admin['password']?.toString().trim() ?? '';
-
+          String dbPassword = admin['password_hash']?.toString().trim() ?? admin['password']?.toString().trim() ?? '';
           if (dbUsername.toLowerCase() == username.trim().toLowerCase() && dbPassword == password.trim()) {
             isAdminLoggedIn = true;
             final prefs = await SharedPreferences.getInstance();
@@ -223,26 +190,17 @@ class AppState extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      if (username.trim().toLowerCase() == 'admin' && password.trim() == '123456') {
-        isAdminLoggedIn = true;
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isAdminLoggedIn', true);
-        notifyListeners();
-        return true;
-      }
       return false;
     }
   }
 
   void logoutAdmin() {
     isAdminLoggedIn = false;
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setBool('isAdminLoggedIn', false);
-    });
+    SharedPreferences.getInstance().then((prefs) => prefs.setBool('isAdminLoggedIn', false));
     notifyListeners();
   }
 
-  // --- مصادقة العميل والتحقق الذكي ---
+  // --- العميل (تعديل دالة فحص العميل لجلب البيانات القديمة وعدم مسحها) ---
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
 
@@ -256,12 +214,7 @@ class AppState extends ChangeNotifier {
     final city = prefs.getString('userCity') ?? currentCity;
 
     if (phone != null && phone.isNotEmpty) {
-      userProfile = {
-        'phone': phone,
-        'name': name ?? '',
-        'city': city,
-        'address': address ?? '',
-      };
+      userProfile = {'phone': phone, 'name': name ?? '', 'city': city, 'address': address ?? ''};
       notifyListeners();
     }
   }
@@ -269,33 +222,25 @@ class AppState extends ChangeNotifier {
   Future<bool> checkAndLoginCustomer(String phone) async {
     try {
       String cleanPhone = _normalizePhone(phone);
-      final response = await supabase
-          .from('customers')
-          .select()
-          .eq('phone', cleanPhone)
-          .maybeSingle();
-
+      final response = await supabase.from('customers').select().eq('phone', cleanPhone).maybeSingle();
+      
       if (response != null) {
+        // العميل موجود مسبقاً في قاعدة البيانات: جلب الاسم والعنوان الأصليين دون إعادة كتابتهما بفارغ
         String name = response['name']?.toString() ?? '';
         String address = response['address']?.toString() ?? '';
-
-        userProfile = {
-          'phone': cleanPhone,
-          'name': name,
-          'city': currentCity,
-          'address': address,
-        };
-
+        
+        userProfile = {'phone': cleanPhone, 'name': name, 'city': currentCity, 'address': address};
+        
         final prefs = await SharedPreferences.getInstance();
         prefs.setString('userPhone', cleanPhone);
         prefs.setString('userName', name);
         prefs.setString('userAddress', address);
         prefs.setString('userCity', currentCity);
-
+        
         notifyListeners();
-        return true;
+        return true; // الرقم موجود وتم جلب بياناته بنجاح
       }
-      return false;
+      return false; // الرقم غير موجود، يتطلب إدخال الاسم والعنوان الجديد
     } catch (e) {
       debugPrint('❌ خطأ في فحص العميل: $e');
       return false;
@@ -312,12 +257,10 @@ class AppState extends ChangeNotifier {
     if (generatedDynamicOtp != null && enteredOtp == generatedDynamicOtp) {
       String cleanPhone = _normalizePhone(phone);
       userProfile = {'phone': cleanPhone, 'name': '', 'city': currentCity, 'address': ''};
-
       SharedPreferences.getInstance().then((prefs) {
         prefs.setString('userPhone', cleanPhone);
         prefs.setString('userCity', currentCity);
       });
-
       notifyListeners();
       return true;
     }
@@ -329,23 +272,15 @@ class AppState extends ChangeNotifier {
       userProfile!['name'] = name;
       userProfile!['address'] = address;
       String phone = userProfile!['phone'] ?? '';
-
       final prefs = await SharedPreferences.getInstance();
       prefs.setString('userName', name);
       prefs.setString('userAddress', address);
-
       try {
-        await supabase.from('customers').upsert({
-          'phone': phone,
-          'name': name,
-          'address': address,
-        }, onConflict: 'phone');
-
+        await supabase.from('customers').upsert({'phone': phone, 'name': name, 'address': address}, onConflict: 'phone');
         await requestLocationAndNotificationPermissions();
       } catch (e) {
         debugPrint('❌ خطأ في حفظ العميل: $e');
       }
-
       notifyListeners();
     }
   }
@@ -359,7 +294,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- إدارة المناديب وحالتهم ---
+  // --- المناديب ---
   Map<String, dynamic>? currentCourier;
   List couriers = [];
 
@@ -411,18 +346,11 @@ class AppState extends ChangeNotifier {
     if (index != -1) {
       couriers[index]['is_logged_in'] = true;
       currentCourier = couriers[index];
-
       final cId = currentCourier!['id']?.toString() ?? currentCourier!['delivery_man_id'].toString();
-      SharedPreferences.getInstance().then((prefs) {
-        prefs.setString('loggedCourierId', cId);
-      });
-
+      SharedPreferences.getInstance().then((prefs) => prefs.setString('loggedCourierId', cId));
       try {
         supabase.from('couriers').update({'is_logged_in': true}).eq('id', cId);
-      } catch (e) {
-        debugPrint('⚠️ خطأ تحديث المندوب: $e');
-      }
-
+      } catch (e) {}
       notifyListeners();
       return true;
     }
@@ -433,25 +361,17 @@ class AppState extends ChangeNotifier {
     if (currentCourier != null) {
       final courierId = currentCourier!['id'] ?? currentCourier!['delivery_man_id'];
       final index = couriers.indexWhere((c) => c['delivery_man_id'] == courierId || c['id'] == courierId);
-      if (index != -1) {
-        couriers[index]['is_logged_in'] = false;
-      }
-
+      if (index != -1) couriers[index]['is_logged_in'] = false;
       try {
         supabase.from('couriers').update({'is_logged_in': false}).eq('id', courierId);
-      } catch (e) {
-        debugPrint('⚠️ خطأ خروج المندوب: $e');
-      }
-
+      } catch (e) {}
       currentCourier = null;
-      SharedPreferences.getInstance().then((prefs) {
-        prefs.remove('loggedCourierId');
-      });
+      SharedPreferences.getInstance().then((prefs) => prefs.remove('loggedCourierId'));
       notifyListeners();
     }
   }
 
-  // --- سلة المشتريات ---
+  // --- السلة ---
   final List<CartItemModel> _cartItems = [];
   List<CartItemModel> get cartItems => _cartItems;
 
@@ -460,8 +380,7 @@ class AppState extends ChangeNotifier {
 
   int getProductQuantityInCart(String productId) {
     final index = _cartItems.indexWhere((item) => item.id == productId);
-    if (index >= 0) return _cartItems[index].quantity;
-    return 0;
+    return index >= 0 ? _cartItems[index].quantity : 0;
   }
 
   void addToCart(CartItemModel item) {
@@ -483,9 +402,7 @@ class AppState extends ChangeNotifier {
     final index = _cartItems.indexWhere((item) => item.id == id);
     if (index >= 0) {
       _cartItems[index].quantity += delta;
-      if (_cartItems[index].quantity <= 0) {
-        _cartItems.removeAt(index);
-      }
+      if (_cartItems[index].quantity <= 0) _cartItems.removeAt(index);
       notifyListeners();
     }
   }
@@ -511,7 +428,7 @@ class AppState extends ChangeNotifier {
     addCustomItem(name: customName, price: estimatedPrice.toInt(), quantity: 1, notes: '');
   }
 
-  // --- المنتجات ---
+  // --- المنتجات (مع دعم صور المنتجات) ---
   List products = [];
 
   Future<void> fetchProductsFromSupabase() async {
@@ -549,27 +466,20 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- الطلبات وعزلها وتحديثها بلحظية تامة ---
+  // --- الطلبات (مع تمرير معلومات الدفع) ---
   List orders = [];
   List notifications = [];
 
   String _normalizePhone(String phone) {
     String clean = phone.trim().replaceAll(' ', '');
-    if (clean.startsWith('0')) {
-      clean = clean.substring(1);
-    }
-    if (clean.startsWith('967')) {
-      clean = clean.substring(3);
-    }
+    if (clean.startsWith('0')) clean = clean.substring(1);
+    if (clean.startsWith('967')) clean = clean.substring(3);
     return clean;
   }
 
   List get customerOrders {
-    if (userProfile == null || userProfile!['phone'] == null || userProfile!['phone']!.isEmpty) {
-      return [];
-    }
+    if (userProfile == null || userProfile!['phone'] == null || userProfile!['phone']!.isEmpty) return [];
     String myPhone = _normalizePhone(userProfile!['phone']!);
-
     return orders.where((o) {
       String orderPhone = _normalizePhone(o['phone']?.toString() ?? '');
       return orderPhone.isNotEmpty && orderPhone == myPhone;
@@ -592,7 +502,7 @@ class AppState extends ChangeNotifier {
         orders = List.from(data);
         notifyListeners();
       }, onError: (error) {
-        debugPrint('⚠️ خطأ في الاستماع للطلبات: $error');
+        debugPrint('⚠️ خطأ في استماع الطلبات: $error');
       });
     } catch (e) {
       debugPrint('❌ خطأ في جلب الطلبات: $e');
@@ -605,6 +515,8 @@ class AppState extends ChangeNotifier {
     required String address,
     required String itemsDesc,
     required double productsTotal,
+    required String paymentMethod,   // 'cash' أو 'kuraimi' أو اسم المحفظة
+    required String paymentAccount,  // رقم الحساب المدخل
   }) async {
     userProfile = {'phone': phone, 'name': customerName, 'city': currentCity, 'address': address};
 
@@ -620,9 +532,10 @@ class AppState extends ChangeNotifier {
       'status': 'waitingForPricing',
       'is_fee_sent': false,
       'admin_message': 'بانتظار تحديد رسوم التوصيل من المشرف',
+      'payment_method': paymentMethod,
+      'payment_account': paymentAccount,
       'date': DateTime.now().toString().split(' ')[0],
     };
-
     try {
       await supabase.from('orders').insert(orderData);
       _cartItems.clear();
@@ -636,14 +549,6 @@ class AppState extends ChangeNotifier {
   Future<void> setOrderDeliveryFee(dynamic orderId, double fee, String courierName) async {
     try {
       final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
-      if (orderIndex != -1) {
-        final currentStatus = orders[orderIndex]['status']?.toString();
-        if (currentStatus != null && currentStatus != 'waitingForPricing' && currentStatus != 'pricingSentToCustomer') {
-          debugPrint('⚠️ الطلب مؤكد أو منتهي، لا يمكن تعديل تسعيره!');
-          return;
-        }
-      }
-
       double productsTotal = orderIndex != -1 ? double.tryParse(orders[orderIndex]['products_total'].toString()) ?? 0.0 : 0.0;
       double totalPrice = productsTotal + fee;
 
@@ -664,7 +569,7 @@ class AppState extends ChangeNotifier {
         orders[orderIndex]['admin_message'] = 'تم تحديد رسوم التوصيل ($fee ر.ي). بانتظار موافقة العميل ⏳';
       }
 
-      addNotification('تم تسعير الطلب #$orderId 💰', 'تم تحديد رسوم التوصيل ($fee ر.ي). يرجى من العميل تأكيد الطلب!');
+      addNotification('تم تسعير الطلب #$orderId 💰', 'تم تحديد رسوم التوصيل ($fee ر.ي).');
       notifyListeners();
     } catch (e) {
       debugPrint('❌ خطأ تحديث الرسوم: $e');
@@ -673,7 +578,6 @@ class AppState extends ChangeNotifier {
 
   Future<void> customerApprovePricing(dynamic orderId) async {
     final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
-
     await supabase.from('orders').update({
       'status': 'waitingCourierApproval',
       'admin_message': 'تم تأكيد الطلب والموافقة على السعر من قِبل العميل ⏳',
@@ -683,18 +587,14 @@ class AppState extends ChangeNotifier {
       orders[orderIndex]['status'] = 'waitingCourierApproval';
       orders[orderIndex]['admin_message'] = 'تم تأكيد الطلب والموافقة على السعر من قِبل العميل ⏳';
     }
-
     addNotification('تأكيد الطلب 👍', 'تم تأكيد طلبك #$orderId وجاري إشعار المندوب');
     notifyListeners();
   }
 
-  Future<void> customerConfirmOrder(dynamic orderId) async {
-    await customerApprovePricing(orderId);
-  }
+  Future<void> customerConfirmOrder(dynamic orderId) async => await customerApprovePricing(orderId);
 
   Future<void> customerCancelOrder(dynamic orderId) async {
     final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
-
     await supabase.from('orders').update({
       'status': 'cancelledByCustomer',
       'admin_message': 'تم إلغاء الطلب من قِبل العميل ❌',
@@ -704,14 +604,12 @@ class AppState extends ChangeNotifier {
       orders[orderIndex]['status'] = 'cancelledByCustomer';
       orders[orderIndex]['admin_message'] = 'تم إلغاء الطلب من قِبل العميل ❌';
     }
-
-    addNotification('إلغاء الطلب ❌', 'تم إلغاء الطلب #$orderId بناءً على رغبتك');
+    addNotification('إلغاء الطلب ❌', 'تم إلغاء الطلب #$orderId');
     notifyListeners();
   }
 
   Future<void> courierRespondToOrder(dynamic orderId, bool accepted) async {
     final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
-
     if (accepted) {
       await supabase.from('orders').update({
         'status': 'onTheWay',
@@ -722,7 +620,6 @@ class AppState extends ChangeNotifier {
         orders[orderIndex]['status'] = 'onTheWay';
         orders[orderIndex]['admin_message'] = 'المندوب قَبِل الطلب وهو في الطريق 🟢';
       }
-
       if (currentCourier != null) {
         String cId = currentCourier!['id'].toString();
         await supabase.from('couriers').update({'status': 'busy'}).eq('id', cId);
@@ -748,7 +645,6 @@ class AppState extends ChangeNotifier {
 
   Future<void> courierUpdateArrival(dynamic orderId) async {
     final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
-
     await supabase.from('orders').update({
       'status': 'arrived',
       'admin_message': 'المندوب وصل لموقع العميل 📍',
@@ -763,7 +659,6 @@ class AppState extends ChangeNotifier {
 
   Future<void> markOrderDelivered(dynamic orderId) async {
     final orderIndex = orders.indexWhere((o) => o['id'].toString() == orderId.toString());
-
     await supabase.from('orders').update({
       'status': 'delivered',
       'admin_message': 'تم تسليم الطلب بنجاح ✅',
@@ -773,7 +668,6 @@ class AppState extends ChangeNotifier {
       orders[orderIndex]['status'] = 'delivered';
       orders[orderIndex]['admin_message'] = 'تم تسليم الطلب بنجاح ✅';
     }
-
     if (currentCourier != null) {
       String cId = currentCourier!['id'].toString();
       await supabase.from('couriers').update({'status': 'available'}).eq('id', cId);
