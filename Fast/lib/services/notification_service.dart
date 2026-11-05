@@ -1,28 +1,33 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class NotificationService {
-  static final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
-  /// 👈 تهيئة نظام الإشعارات المحلية وإعداد قناة أندرويد
+  /// 👈 تهيئة الإشعارات عبر Firebase وطلب الأذونات بدون أي ملفات أندرويد
   static Future<void> initialize() async {
     try {
-      const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
+      await requestNotificationPermission();
 
-      const InitializationSettings initializationSettings =
-          InitializationSettings(android: initializationSettingsAndroid);
+      // الاستماع للإشعارات في الواجهة الأمامية
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint('🔔 [إشعار مباشر]: ${message.notification?.title} - ${message.notification?.body}');
+      });
 
-      await _localNotificationsPlugin.initialize(initializationSettings);
-      debugPrint('🟢 تم تهيئة نظام الإشعارات المحلي بنجاح');
+      // التعامل مع النقر على الإشعار
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        debugPrint('🚀 [النقر على الإشعار]: ${message.data}');
+      });
+
+      String? token = await FirebaseMessaging.instance.getToken();
+      debugPrint('📱 [FCM Token]: $token');
+
+      debugPrint('🟢 تم تهيئة نظام الإشعارات بنجاح');
     } catch (e) {
       debugPrint('⚠️ خطأ في تهيئة الإشعارات: $e');
     }
   }
 
-  /// 👈 دالة طلب إذن الإشعارات رسمياً من النظام
+  /// 👈 طلب إذن الإشعارات من النظام
   static Future<bool> requestNotificationPermission() async {
     try {
       var status = await Permission.notification.status;
@@ -36,31 +41,8 @@ class NotificationService {
     }
   }
 
-  /// 👈 دالة عرض إشعار حقيقي وفوري يظهر على شاشة الهاتف للمستخدم
+  /// 👈 دالة فارغة توافقية (Firebase سيقوم بعرض الإشعار في الشريط تلقائياً)
   static Future<void> showLocalNotification(String title, String body) async {
-    try {
-      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-        'fast_delivery_channel_id',
-        'تنبيهات تطبيق FAST',
-        channelDescription: 'قناة إشعارات طلبات وحالة توصيل FAST في تعز',
-        importance: Importance.max,
-        priority: Priority.high,
-        ticker: 'ticker',
-      );
-
-      const NotificationDetails notificationDetails =
-          NotificationDetails(android: androidDetails);
-
-      await _localNotificationsPlugin.show(
-        DateTime.now().millisecond, // معرف فريد للإشعار
-        title,
-        body,
-        notificationDetails,
-      );
-      
-      debugPrint('🔔 [تم إرسال إشعار حقيقي بنجاح]: $title - $body');
-    } catch (e) {
-      debugPrint('❌ خطأ في عرض الإشعار المحلي: $e');
-    }
+    debugPrint('📢 [FAST Notification]: $title - $body');
   }
 }
