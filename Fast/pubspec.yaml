@@ -1,4 +1,4 @@
-name: fast
+Name: fast
 description: Fast Delivery App - أسرع تطبيق توصيل في تعز.
 publish_to: 'none'
 version: 2.2.0+2
@@ -21,8 +21,7 @@ dependencies:
   share_plus: ^7.2.1
   firebase_messaging: ^15.0.0
   permission_handler: ^11.3.1
-  flutter_local_notifications: ^17.0.0 # 👈 أضفنا هذه لمنع خطأ الإشعارات
-  google_maps_flutter: ^2.6.0 # 👈 وأضفنا هذه لمنع خطأ الخرائط
+  flutter_local_notifications: ^17.0.0
 
 dev_dependencies:
   flutter_test:
