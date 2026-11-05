@@ -108,7 +108,6 @@ class AppState extends ChangeNotifier {
   // 👈 تسلسل طلب الأذونات: الموقع أولاً ثم الإشعارات ثانياً
   Future<void> requestLocationAndNotificationPermissions() async {
     try {
-      // 1️⃣ أولاً: طلب إذن الموقع (GPS)
       LocationPermission locationPermission = await Geolocator.checkPermission();
       if (locationPermission == LocationPermission.denied) {
         locationPermission = await Geolocator.requestPermission();
@@ -120,7 +119,6 @@ class AppState extends ChangeNotifier {
         debugPrint('📍 تم التعامل مع إذن الموقع بنجاح');
       }
 
-      // 2️⃣ ثانياً: بعد الانتهاء من الموقع، طلب إذن الإشعارات مباشرة
       bool notificationGranted = await NotificationService.requestNotificationPermission();
       if (notificationGranted) {
         debugPrint('🔔 تم منح إذن الإشعارات بنجاح');
@@ -458,7 +456,7 @@ class AppState extends ChangeNotifier {
   List<CartItemModel> get cartItems => _cartItems;
 
   int get totalCartItemsCount => _cartItems.fold(0, (sum, item) => sum + item.quantity);
-  double get totalAmount => _cartItems.fold(0.0, (sum, item) => sum + (item.price * item.quantity)); // 👈 تم التصحيح هنا
+  double get totalAmount => _cartItems.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
 
   int getProductQuantityInCart(String productId) {
     final index = _cartItems.indexWhere((item) => item.id == productId);
