@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../widgets/fast_app_logo.dart';
-import 'main_shell.dart'; // 👈 الانتقال إلى الحاوية الرئيسية الشاملة
+import 'home_screen.dart'; // 👈 تم التعديل ليتم التوجيه مباشرة إلى HomeScreen حيث يوجد شريط التنقل السفلي الخاص بك
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -31,7 +31,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => const MainShell(), // 👈 التوجيه إلى MainShell
+            pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(), // 👈 التوجيه المباشر إلى HomeScreen
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },
