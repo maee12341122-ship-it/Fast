@@ -1094,4 +1094,190 @@ class _HomeScreenState extends State<HomeScreen> {
                       foregroundColor: Colors.amber,
                       minimumSize: const Size(double.infinity, 42),
                       shape: RoundedRectangleBorder(
-   
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.amber.withOpacity(0.5)),
+                      ),
+                    ),
+                    onPressed: () {
+                      _showRatingDialog(context, appState, order['id'].toString(), cardBg, textColor);
+                    },
+                    icon: const Icon(Icons.star, size: 18),
+                    label: const Text('قيم المندوب وخدمة التوصيل ⭐', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStepIndicator(int stepNumber, String title, bool isCompleted) {
+    return Column(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isCompleted ? Colors.amber : Colors.grey[800],
+          ),
+          child: Center(
+            child: Text(
+              '$stepNumber',
+              style: TextStyle(color: isCompleted ? Colors.black : Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(title, style: TextStyle(color: isCompleted ? Colors.amber : Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildStepLine(bool isActive) {
+    return Expanded(
+      child: Container(
+        height: 2,
+        color: isActive ? Colors.amber : Colors.grey[800],
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+      ),
+    );
+  }
+
+  Widget _buildProfileTab(AppState appState, Color cardBg, Color textColor) {
+    final profile = appState.userProfile;
+
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        Center(
+          child: Text('حسابي الشخصي', style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 20),
+        profile == null
+            ? Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.amber.withOpacity(0.3)),
+          ),
+          child: Column(
+            children: [
+              const Icon(Icons.person, size: 60, color: Colors.amber),
+              const SizedBox(height: 10),
+              Text('أنت لست مسجل دخول!', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 5),
+              const Text('سجل دخولك برقم هاتفك للاستمتاع بتجربة التوصيل الأسرع في تعز.', style: TextStyle(color: Colors.grey, fontSize: 13), textAlign: TextAlign.center),
+              const SizedBox(height: 18),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const PhoneAuthScreen()),
+                  );
+                },
+                child: const Text('تسجيل الدخول برقم الهاتف 📱', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15)),
+              ),
+            ],
+          ),
+        )
+            : Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.amber.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              const CircleAvatar(
+                backgroundColor: Colors.amber,
+                radius: 24,
+                child: Icon(Icons.person, color: Colors.black, size: 28),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(profile['name'] ?? 'عميل FAST', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 4),
+                    Text('📞 ${profile['phone']} | 📍 تعز', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    if (profile['address'] != null && profile['address'].toString().isNotEmpty)
+                      Text('🏠 العنوان: ${profile['address']}', style: const TextStyle(color: Colors.amber, fontSize: 12)),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => appState.logoutUser(),
+                child: const Text('خروج', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        _buildProfileItem(Icons.edit, 'تعديل البيانات الشخصية', cardBg, textColor, () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+          );
+        }),
+
+        _buildProfileItem(Icons.dark_mode, 'مظهر التطبيق (${appState.isDarkMode ? "الوضع الداكن" : "الوضع الفاتح"})', cardBg, textColor, () {
+          appState.toggleTheme();
+        }),
+        _buildProfileItem(Icons.location_city, 'المدينة (تعز - اليمن - حصرياً)', cardBg, textColor, () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تطبيق FAST مخصص لخدمة مدينة تعز بكل سرعة 🌟')),
+          );
+        }),
+        _buildProfileItem(Icons.share, 'مشاركة التطبيق مع الأصدقاء', cardBg, textColor, () {
+          appState.shareApp();
+        }),
+        _buildProfileItem(Icons.help_outline, 'مركز المساعدة والأسئلة الشائعة', cardBg, textColor, () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: cardBg,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('كيف نعمل؟', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+              content: const Text(
+                '1. تختار منتجاتك أو تطلب طلباً خاصاً.\n2. تحدد الإدارة سعر التوصيل.\n3. توافق على التسعير ليذهب الطلب للمندوب.\n4. يستلم طلبك حتى باب منزلك بكل سرعة!',
+                style: TextStyle(color: Colors.grey, height: 1.5),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('فهمت', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)))
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildProfileItem(IconData icon, String title, Color cardBg, Color textColor, VoidCallback onTap) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.amber),
+        title: Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        onTap: onTap,
+      ),
+    );
+  }
+}
