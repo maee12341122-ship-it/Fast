@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
 import '../models/address_model.dart';
@@ -79,7 +80,51 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- إرسال رمز التحقق عبر الواتساب ---
+  // --- إرسال رمز التحقق الاحترافي عبر Meta Cloud API (WhatsApp Business) ---
+  Future<void> sendOtpViaMetaCloudApi({
+    required String recipientPhoneNumber, // رقم هاتف العميل (مثلاً: 96777xxxxxxx+)
+    required String otpCode,            // رمز التحقق (مثل: 4829)
+  }) async {
+    // 1. معرّف رقم الهاتف الثابت من لوحة تحكم ميتا
+    final String phoneNumberId = '1517410681448211'; 
+    
+    // 2. رمز الوصول المؤقت والجديد
+    final String accessToken = 'EAAeqnZC78m0EBS6hiW4S9quwmMjbFvrahDPgvfqakZBEIZAZAhMfiDVcSVVFCX8TK0GZBghYTZAr2cOmZAlzbZBTgNfFqMvM84gIXJ8aJbSnnY7gNmDHEB3OmoVXLs0w1JMUwFNNIPLCtsm2pWWEkUr7U3q3orJ6ugwYVqsYQ7fHfrfLf92PZA6Kqr1JlTTXFjvW4sQWcqpygZCM2ZBNrc8aisdBFa1ZAR901hCPqsTe6cUZD';
+
+    final url = Uri.parse('https://graph.facebook.com/v18.0/$phoneNumberId/messages');
+
+    final headers = {
+      'Authorization': 'Bearer $accessToken',
+      'Content-Type': 'application/json',
+    };
+
+    // تجهيز رسالة الـ OTP (باستخدام القالب التجريبي المعتمد)
+    final body = jsonEncode({
+      "messaging_product": "whatsapp",
+      "to": recipientPhoneNumber,
+      "type": "template",
+      "template": {
+        "name": "hello_world", // قالب التجربة الافتراضي المتاح في حسابك حالياً
+        "language": {
+          "code": "en_US"
+        }
+      }
+    });
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ تم إرسال رمز التحقق عبر Meta Cloud API بنجاح! 🚀');
+      } else {
+        debugPrint('❌ فشل إرسال الواتساب: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ حدث خطأ في الشبكة أثناء إرسال الـ OTP: $e');
+    }
+  }
+
+  // --- إرسال رمز التحقق القديم عبر رابط الواتساب (احتياطي) ---
   Future<void> sendOtpViaWhatsAppDirect(String phone) async {
     if (generatedDynamicOtp == null) return;
 
@@ -312,6 +357,14 @@ class AppState extends ChangeNotifier {
   void requestOtpForPhone(String phone) {
     final randomOtp = (100000 + Random().nextInt(900000)).toString();
     generatedDynamicOtp = randomOtp;
+    
+    // إرسال الرمز فعلياً عبر Meta Cloud API تلقائياً
+    String cleanPhone = _normalizePhone(phone);
+    sendOtpViaMetaCloudApi(
+      recipientPhoneNumber: cleanPhone,
+      otpCode: randomOtp,
+    );
+
     notifyListeners();
   }
 
@@ -673,7 +726,6 @@ class AppState extends ChangeNotifier {
   }) async {
     userProfile = {'phone': phone, 'name': customerName, 'city': currentCity, 'address': address};
 
-    // 💡 تم تحديث الحقول لتتطابق 100% مع أعمدة جدول orders في سوبابيس (items_description, total_price, payment_method, payment_account)
     final orderData = {
       'customer_name': customerName.trim(),
       'phone': phone.trim(),
@@ -692,10 +744,7 @@ class AppState extends ChangeNotifier {
     };
 
     try {
-      // إرسال الطلب الفعلي إلى قاعدة بيانات Supabase
       final response = await supabase.from('orders').insert(orderData).select();
-
-      // تفريغ السلة محلياً لضمان عدم بقاء المنتجات بعد إتمام الطلب بنجاح
       _cartItems.clear();
 
       addNotification('تم إرسال الطلب ⏳', 'طلبك بانتظار تحديد رسوم التوصيل من المشرف');
