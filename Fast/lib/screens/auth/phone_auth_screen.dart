@@ -168,8 +168,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                                   const SnackBar(content: Text('تم العثور على حسابك السابق واسترجاع بياناتك بنجاح! ✅')),
                                 );
                               } else {
+                                // طلب وإرسال الرمز تلقائياً عبر Meta Cloud API في الخلفية
                                 appState.requestOtpForPhone(phone);
-                                await appState.sendOtpViaWhatsAppDirect(phone);
 
                                 setState(() {
                                   _isLoading = false;
@@ -177,7 +177,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                                 });
 
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('تم فتح الواتساب لإرسال رمز التحقق بنجاح! 📲')),
+                                  const SnackBar(content: Text('تم إرسال رمز التحقق إلى رقمك عبر الواتساب بنجاح! 📲')),
                                 );
                               }
                             },
@@ -195,7 +195,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'تم إرسال الرمز المكون من 6 أرقام إلى الرقم (${_phoneController.text})',
+                      'تم إرسال الرمز المكون من أرقام إلى الرقم (${_phoneController.text})',
                       style: const TextStyle(color: Colors.grey, fontSize: 13),
                       textAlign: TextAlign.center,
                     ),
@@ -304,7 +304,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey.shade800),
                         ),
-                        focusedBorder: OutlineInputBorder(
+                        focusedBorder: OutlineImportsBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(color: primaryGold, width: 2),
                         ),
