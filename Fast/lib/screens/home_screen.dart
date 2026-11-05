@@ -11,7 +11,7 @@ import 'customer/checkout_screen.dart';
 import 'auth/phone_auth_screen.dart';
 import 'courier_screen.dart';
 import 'package:fast/screens/chat_screen.dart';
-import 'customer/edit_profile_screen.dart'; // 👈 استيراد شاشة تعديل الحساب
+import 'customer/edit_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -370,10 +370,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
+          // 👈 استخدام IndexedStack لضمان عدم إعادة بناء الشاشات وعرض جسم التطبيق بسلاسة
           body: IndexedStack(
             index: _currentIndex,
             children: pages,
           ),
+          // 👈 شريط التنقل السفلي الرئيسي والوحيد في التطبيق (تم إزالة أي تكرار سابق)
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex,
             onTap: (index) {
@@ -1051,7 +1053,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 20),
 
-        // 👈 زر الانتقال لشاشة تعديل البيانات الشخصية
         _buildProfileItem(Icons.edit, 'تعديل البيانات الشخصية', cardBg, textColor, () {
           Navigator.push(
             context,
