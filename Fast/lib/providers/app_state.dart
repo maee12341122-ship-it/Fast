@@ -82,13 +82,22 @@ class AppState extends ChangeNotifier {
 
   // --- إرسال رمز التحقق الاحترافي عبر Meta Cloud API (WhatsApp Business) ---
   Future<void> sendOtpViaMetaCloudApi({
-    required String recipientPhoneNumber, // رقم هاتف العميل (مثلاً: 96777xxxxxxx+)
+    required String recipientPhoneNumber, // رقم هاتف العميل (مثلاً: 775145534)
     required String otpCode,            // رمز التحقق (مثل: 4829)
   }) async {
-    // 1. معرّف رقم الهاتف الثابت من لوحة تحكم ميتا
+    // 1. تنظيف الرقم وتنسيقه دولياً لليمن تلقائياً (967...)
+    String cleanPhone = recipientPhoneNumber.trim().replaceAll(' ', '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = cleanPhone.substring(1);
+    }
+    if (!cleanPhone.startsWith('967')) {
+      cleanPhone = '967$cleanPhone';
+    }
+
+    // 2. معرّف رقم الهاتف الثابت من لوحة تحكم ميتا
     final String phoneNumberId = '1517410681448211'; 
     
-    // 2. رمز الوصول المؤقت والجديد
+    // 3. رمز الوصول المؤقت والجديد
     final String accessToken = 'EAAeqnZC78m0EBS6hiW4S9quwmMjbFvrahDPgvfqakZBEIZAZAhMfiDVcSVVFCX8TK0GZBghYTZAr2cOmZAlzbZBTgNfFqMvM84gIXJ8aJbSnnY7gNmDHEB3OmoVXLs0w1JMUwFNNIPLCtsm2pWWEkUr7U3q3orJ6ugwYVqsYQ7fHfrfLf92PZA6Kqr1JlTTXFjvW4sQWcqpygZCM2ZBNrc8aisdBFa1ZAR901hCPqsTe6cUZD';
 
     final url = Uri.parse('https://graph.facebook.com/v18.0/$phoneNumberId/messages');
@@ -98,29 +107,28 @@ class AppState extends ChangeNotifier {
       'Content-Type': 'application/json',
     };
 
-    // تجهيز رسالة الـ OTP (باستخدام القالب التجريبي المعتمد)
+    // تجهيز رسالة الـ OTP كرسالة نصية مباشرة عبر ميتا
     final body = jsonEncode({
       "messaging_product": "whatsapp",
-      "to": recipientPhoneNumber,
-      "type": "template",
-      "template": {
-        "name": "hello_world", // قالب التجربة الافتراضي المتاح في حسابك حالياً
-        "language": {
-          "code": "en_US"
-        }
+      "recipient_type": "individual",
+      "to": cleanPhone,
+      "type": "text",
+      "text": {
+        "preview_url": false,
+        "body": "رمز التحقق الخاص بك في تطبيق FAST هو: $otpCode 🚀"
       }
     });
 
     try {
       final response = await http.post(url, headers: headers, body: body);
 
-      if (response.statusCode == 200) {
-        debugPrint('✅ تم إرسال رمز التحقق عبر Meta Cloud API بنجاح! 🚀');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint('✅ تم إرسال رمز التحقق عبر Meta Cloud API بنجاح إلى $cleanPhone! 🚀');
       } else {
-        debugPrint('❌ فشل إرسال الواتساب: ${response.body}');
+        debugPrint('❌ فشل إرسال الواتساب من ميتا: ${response.body}');
       }
     } catch (e) {
-      debugPrint('❌ حدث خطأ في الشبكة أثناء إرسال الـ OTP: $e');
+      debugPrint('❌ حدث خطأ في الشبكة أثناء إرسال الـ OTP عبر ميتا: $e');
     }
   }
 
