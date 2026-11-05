@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
-import 'chat_screen.dart';
+import 'package:fast/screens/chat_screen.dart';
+
 
 class DeliveryDashboard extends StatefulWidget {
   final String courierId;
