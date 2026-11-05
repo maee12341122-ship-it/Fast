@@ -551,6 +551,7 @@ class _HomeScreenState extends State<HomeScreen> {
             index: _currentIndex,
             children: pages,
           ),
+          // تم ضبط شريط التنقل السفلي هنا ليكون حصرياً ووحيداً بالأسفل دون أي تكرار
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex,
             onTap: (index) {
