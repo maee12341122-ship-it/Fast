@@ -123,9 +123,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     setState(() {
                       _addressController.text = selectedAddress;
                     });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تم تحديث العنوان الإحداثي بنجاح! 📍')),
-                    );
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('تم تحديث العنوان الإحداثي بنجاح! 📍')),
+                      );
+                    }
                   }
                 },
                 child: Container(
@@ -187,11 +189,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       _nameController.text.trim(),
                       _addressController.text.trim(),
                     );
-
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تم حفظ وتحديث بيانات الحساب بنجاح! ✅')),
+                    
+                    // تحديث الهاتف أيضاً إذا تم تغييره
+                    await context.read<AppState>().updateUser(
+                      name: _nameController.text.trim(),
+                      phone: _phoneController.text.trim(),
                     );
+
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('تم حفظ وتحديث بيانات الحساب بنجاح! ✅')),
+                      );
+                    }
                   },
                   child: const Text(
                     'حفظ التعديلات 🚀',
