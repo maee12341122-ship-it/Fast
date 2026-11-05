@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'services/notification_service.dart'; // استيراد خدمة الإشعارات الفورية
+import 'services/notification_service.dart';
 import 'providers/app_state.dart';
-import 'screens/splash_screen.dart'; // استيراد شاشة البداية الاحترافية
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // تهيئة Supabase بمفاتيح المشروع الخاصة بك
   try {
     await Supabase.initialize(
       url: 'https://pzokmpthkpuofrntufyp.supabase.co',
-      anonKey: ' sb_publishable_uI01Ippgs8yXi9k18JO8DQ_Zm74RqQf',
+      anonKey: 'sb_publishable_uI01Ippgs8yXi9k18JO8DQ_Zm74RqQf',
     );
   } catch (e) {
     debugPrint('⚠️ خطأ في اتصال Supabase: $e');
   }
 
-  // تهيئة وتفعيل نظام الإشعارات الفورية وطلب أذونات العميل
   try {
     await NotificationService.initialize();
   } catch (e) {
@@ -70,7 +68,6 @@ class FastApp extends StatelessWidget {
           foregroundColor: Colors.amber,
         ),
       ),
-      // جعل شاشة الـ Splash هي نقطة البداية الاحترافية للتطبيق
       home: const SplashScreen(),
     );
   }
