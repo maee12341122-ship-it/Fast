@@ -21,12 +21,14 @@ dependencies:
   share_plus: ^7.2.1
   firebase_messaging: ^15.0.0
   permission_handler: ^11.3.1
+  flutter_local_notifications: ^17.0.0 # 👈 أضفنا هذه لمنع خطأ الإشعارات
+  google_maps_flutter: ^2.6.0 # 👈 وأضفنا هذه لمنع خطأ الخرائط
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  flutter_launcher_icons: ^0.13.1 # 👈 أضفنا مكتبة توليد الأيقونات هنا
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -34,7 +36,6 @@ flutter:
   assets:
     - assets/images/app_icon.png
 
-# 👈 إعدادات توليد الأيقونة تلقائياً لشعارك في التطبيق
 flutter_launcher_icons:
   image_path: "assets/images/app_icon.png"
   android: true
