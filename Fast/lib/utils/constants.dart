@@ -1,4 +1,13 @@
+import 'package:flutter/material.dart';
+
 class AppConstants {
+  // اللون الذهبي الأساسي لتصميم التطبيق الفاخر 🌟
+  static const Color gold = Color(0xFFFFD700);
+  
+  // الألوان الثابتة للخلفيات
+  static const Color darkBackground = Color(0xFF121212);
+  static const Color surfaceColor = Color(0xFF1E1E1E);
+
   // رابط الخادم المحلي للـ Backend
   static const String baseUrl = 'http://localhost:3000/api';
 
