@@ -1029,10 +1029,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           onPressed: () {
                             final invoiceText = '⚡ فاتورة تطبيق FAST - تعز\n'
                                 'رقم الطلب: #${order['id']}\n'
-                                'المنتجات: ${order['items_description']}\n'
+                                'المنتجات: ${order['items_desc'] ?? order['items_description']}\n'
                                 'العنوان: ${order['address']}\n'
                                 'رسوم التوصيل: ${order['delivery_fee']} ر.ي\n'
-                                'الإجمالي: ${order['total_price']} ر.ي\n'
+                                'الإجمالي: ${order['total_price'] ?? order['total_amount']} ر.ي\n'
                                 'الحالة: $arabicStatus';
                             Share.share(invoiceText);
                           },
@@ -1075,7 +1075,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text('الحالة: $arabicStatus', style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 6),
                 Text('العنوان: ${order['address']}', style: TextStyle(color: textColor, fontSize: 13)),
-                Text('المنتجات: ${order['items_description']}', style: TextStyle(color: textColor, fontSize: 13)),
+                Text('المنتجات: ${order['items_desc'] ?? order['items_description']}', style: TextStyle(color: textColor, fontSize: 13)),
                 Text('سعر المنتجات: ${order['products_total']} ر.ي', style: TextStyle(color: textColor, fontSize: 13)),
                 Text('رسوم التوصيل: ${order['delivery_fee']} ر.ي', style: const TextStyle(color: Colors.greenAccent, fontSize: 13, fontWeight: FontWeight.bold)),
                 const Divider(color: Colors.white12, height: 16),
@@ -1083,7 +1083,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('الإجمالي الكلي:', style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold)),
-                    Text('${order['total_price']} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
+                    Text('${order['total_price'] ?? order['total_amount']} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
                   ],
                 ),
                 if (status == 'delivered' || status == 'arrived') ...[
