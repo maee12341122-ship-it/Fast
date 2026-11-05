@@ -23,12 +23,9 @@ class LocationService {
       throw StateError('تم رفض إذن الموقع نهائياً. يرجى فتحه يدوياً من إعدادات التطبيق ⚙️');
     }
 
-    // 3. جلب الموقع الجغرافي الحالي بدقة عالية مع مهلة زمنية 20 ثانية
+    // 3. جلب الموقع الجغرافي الحالي بدقة عالية بالتنسيق المتوافق مع الإصدار
     return await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        timeLimit: Duration(seconds: 20),
-      ),
+      desiredAccuracy: LocationAccuracy.high,
     );
   }
 }
