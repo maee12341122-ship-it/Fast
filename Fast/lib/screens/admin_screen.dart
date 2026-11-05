@@ -118,7 +118,6 @@ class _AdminScreenState extends State<AdminScreen> {
         final arabicStatus = _getArabicStatus(rawStatus);
         final assignedCourier = order['assigned_courier']?.toString() ?? 'لم يتم التعيين';
 
-        // 👈 التحقق مما إذا كان الطلب قد تم تسعيره وتخطى مرحلة الانتظار لكي نقفل الحقول
         final bool isLocked = rawStatus != 'waitingForPricing' && rawStatus != 'pricingSentToCustomer';
 
         if (!_feeControllers.containsKey(orderId)) {
@@ -218,7 +217,6 @@ class _AdminScreenState extends State<AdminScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // 👈 قفل الحقول إذا كان الطلب مقفلاً (تم تأكيده ولم يعد بانتظار التسعير)
                 Row(
                   children: [
                     Expanded(
