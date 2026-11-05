@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
+import '../models/address_model.dart'; // 👈 أضفنا استيراد نموذج العناوين لمعالجة AddOrUpdateAddress
 import '../services/notification_service.dart';
 
 class AppState extends ChangeNotifier {
@@ -32,6 +33,14 @@ class AppState extends ChangeNotifier {
   bool isDarkMode = true;
   void toggleTheme() {
     isDarkMode = !isDarkMode;
+    notifyListeners();
+  }
+
+  // 👈 إضافة دعم المظهر (ThemeMode) وتغييره كما تطلبه شاشة التطبيق
+  ThemeMode get themeMode => isDarkMode ? ThemeMode.dark : ThemeMode.light;
+  
+  void setThemeMode(ThemeMode mode) {
+    isDarkMode = (mode == ThemeMode.dark);
     notifyListeners();
   }
 
@@ -242,7 +251,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- مصادقة العميل والتحقق الذكي (فحص عدم التكرار والكتابة الفوقية) ---
+  // --- مصادقة العميل والتحقق الذكي ---
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
 
@@ -312,7 +321,6 @@ class AppState extends ChangeNotifier {
     if (generatedDynamicOtp != null && enteredOtp == generatedDynamicOtp) {
       String cleanPhone = _normalizePhone(phone);
       
-      // جلب البيانات السابقة إذا كانت موجودة مسبقاً في قاعدة البيانات
       checkAndLoginCustomer(cleanPhone).then((exists) {
         if (!exists) {
           userProfile = {'phone': cleanPhone, 'name': '', 'city': currentCity, 'address': ''};
@@ -354,6 +362,36 @@ class AppState extends ChangeNotifier {
 
       notifyListeners();
     }
+  }
+
+  // 👈 إضافة الدوال المفقودة لتعديل بيانات العميل والعناوين لتتوافق مع الشاشات
+  Future<void> updateUser({required String name, required String phone}) async {
+    if (userProfile != null) {
+      userProfile!['name'] = name;
+      userProfile!['phone'] = _normalizePhone(phone);
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setString('userName', name);
+      prefs.setString('userPhone', userProfile!['phone']!);
+      notifyListeners();
+    }
+  }
+
+  Future<void> addOrUpdateAddress(dynamic addressModel) async {
+    String addressDetails = addressModel is String ? addressModel : (addressModel.details ?? '');
+    if (userProfile != null) {
+      userProfile!['address'] = addressDetails;
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setString('userAddress', addressDetails);
+      notifyListeners();
+    }
+  }
+
+  Future<void> setDefaultAddress(String addressId) async {
+    notifyListeners();
+  }
+
+  void clearUser() {
+    logoutUser();
   }
 
   void setUser({required String name, required String phone, required dynamic address}) {
@@ -539,7 +577,7 @@ class AppState extends ChangeNotifier {
     addCustomItem(name: customName, price: estimatedPrice.toInt(), quantity: 1, notes: '');
   }
 
-  // --- المنتجات (مع دعم الصور) ---
+  // --- المنتجات ---
   List products = [];
 
   Future<void> fetchProductsFromSupabase() async {
@@ -627,7 +665,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // 👈 دالة إنشاء الطلب مع دعم نظام الدفع (نقدي أو محافظ إلكترونية) ورقم الحساب
   Future<void> createOrder({
     required String customerName,
     required String phone,
