@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
-import 'home_screen.dart';
+import 'main_shell.dart'; // 👈 التوجيه إلى الحاوية الرئيسية الشاملة
 
 class TermsScreen extends StatelessWidget {
   const TermsScreen({super.key});
@@ -14,7 +14,7 @@ class TermsScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: const Color(0xFF1E1E1E),
           elevation: 2,
-          title: const Text('شروط الاستخدام - FAST', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16)),
+          title: const Text('شروط الاستخدام - FAST 📜', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16)),
         ),
         body: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -40,7 +40,7 @@ class TermsScreen extends StatelessWidget {
                   border: Border.all(color: AppConstants.gold.withOpacity(0.3)),
                 ),
                 child: const Text(
-                  'يرجى قراءة والموافقة على الشروط والأحكام للبدء في استخدام خدمات التوصيل والمتاجر بكل سهولة ويسر في مدينة تعز. جميع الحقوق محفوظة لتطبيق FAST 🌟',
+                  'يرجى قراءة والموافقة على الشروط والأحكام للبدء في استخدام خدمات التوصيل السريع والمتاجر بكل سهولة ويسر في مدينة تعز. جميع الحقوق محفوظة لتطبيق FAST 🌟',
                   style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.6),
                 ),
               ),
@@ -57,7 +57,7 @@ class TermsScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => const HomeScreen()),
+                      MaterialPageRoute(builder: (context) => const MainShell()), // 👈 الانتقال إلى MainShell بدلاً من HomeScreen
                     );
                   },
                   child: const Text(
