@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/app_state.dart';
-import '../utils/constants.dart';
+import '../../providers/app_state.dart';
+import '../../utils/constants.dart';
 import 'map_location_screen.dart'; // 👈 استدعاء شاشة الخريطة التفاعلية
 
 class EditProfileScreen extends StatefulWidget {
@@ -43,9 +43,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFF121212),
         appBar: AppBar(
-          title: const Text('تعديل الحساب الشخصي ⚙️', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold)),
+          // 💡 تم إزالة const لتجنب أخطاء وقت الترجمة مع الألوان المعرفة
+          title: Text('تعديل الحساب الشخصي ⚙️', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold)),
           backgroundColor: const Color(0xFF1E1E1E),
-          iconTheme: const IconThemeData(color: AppConstants.gold),
+          iconTheme: IconThemeData(color: AppConstants.gold),
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -59,7 +60,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration: InputDecoration(
                   labelText: 'الاسم الشخصي',
                   labelStyle: const TextStyle(color: Colors.grey),
-                  prefixIcon: const Icon(Icons.person, color: AppConstants.gold),
+                  prefixIcon: Icon(Icons.person, color: AppConstants.gold),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
                   fillColor: const Color(0xFF1E1E1E),
@@ -75,7 +76,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration: InputDecoration(
                   labelText: 'رقم الهاتف',
                   labelStyle: const TextStyle(color: Colors.grey),
-                  prefixIcon: const Icon(Icons.phone, color: AppConstants.gold),
+                  prefixIcon: Icon(Icons.phone, color: AppConstants.gold),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
                   fillColor: const Color(0xFF1E1E1E),
@@ -90,7 +91,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration: InputDecoration(
                   labelText: 'العنوان (مثال: ديلوكس، شارع جمال...)',
                   labelStyle: const TextStyle(color: Colors.grey),
-                  prefixIcon: const Icon(Icons.home, color: AppConstants.gold),
+                  prefixIcon: Icon(Icons.home, color: AppConstants.gold),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
                   fillColor: const Color(0xFF1E1E1E),
@@ -99,7 +100,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 20),
 
               // قسم الخريطة التفاعلية لتحديد الموقع بدقة
-              const Text(
+              Text(
                 'تحديد الموقع الجغرافي على الخريطة 🗺️',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppConstants.gold),
               ),
@@ -141,12 +142,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      const Column(
+                      Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.map, size: 50, color: AppConstants.gold),
-                          SizedBox(height: 8),
-                          Text(
+                          const SizedBox(height: 8),
+                          const Text(
                             'اضغط هنا لفتح خريطة جوجل التفاعلية 📍',
                             style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13),
                           ),
@@ -161,7 +162,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: AppConstants.gold.withOpacity(0.5)),
                           ),
-                          child: const Text(
+                          child: Text(
                             'تحديد الدبوس على موقعك في تعز',
                             style: TextStyle(fontSize: 11, color: AppConstants.gold, fontWeight: FontWeight.bold),
                           ),
