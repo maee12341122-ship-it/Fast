@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart'; // 👈 أضفنا هذه لاستخدام زر فتح الخرائط بسلاسة
 import '../providers/app_state.dart';
 import 'package:fast/screens/chat_screen.dart';
-
 
 class CourierScreen extends StatefulWidget {
   const CourierScreen({Key? key}) : super(key: key);
@@ -20,6 +20,22 @@ class _CourierScreenState extends State<CourierScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  // 👈 دالة لفتح خرائط جوجل باستخدام العنوان النصي أو رابط البحث
+  Future<void> _openMap(String address) async {
+    final query = Uri.encodeComponent(address.isNotEmpty ? address : 'Taiz, Yemen');
+    final googleMapsUrl = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    
+    if (await canLaunchUrl(googleMapsUrl)) {
+      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح الخريطة حالياً')),
+        );
+      }
+    }
   }
 
   @override
@@ -124,8 +140,6 @@ class _CourierScreenState extends State<CourierScreen> {
   }
 
   Widget _buildCourierOrdersList(AppState appState, Map<String, dynamic> courier) {
-    final String todayDate = DateTime.now().toString().split(' ')[0];
-
     final myOrders = appState.orders.where((o) {
       return o['assigned_courier'] == courier['name'];
     }).toList();
@@ -176,6 +190,7 @@ class _CourierScreenState extends State<CourierScreen> {
                     itemBuilder: (context, index) {
                       final order = myOrders[index];
                       final orderId = order['id'].toString();
+                      final String customerAddress = order['address'] ?? '';
 
                       return Card(
                         color: const Color(0xFF1E1E1E),
@@ -218,8 +233,23 @@ class _CourierScreenState extends State<CourierScreen> {
                                 children: [
                                   const Icon(Icons.location_on, size: 16, color: Colors.redAccent),
                                   const SizedBox(width: 6),
-                                  Expanded(child: Text('العنوان: ${order['address'] ?? ''}', style: const TextStyle(color: Colors.white70, fontSize: 13))),
+                                  Expanded(child: Text('العنوان: $customerAddress', style: const TextStyle(color: Colors.white70, fontSize: 13))),
                                 ],
+                              ),
+                              const SizedBox(height: 8),
+                              // 👈 زر فتح الموقع في خرائط جوجل بضغطة واحدة وبدون أي مشاكل أندرويد
+                              SizedBox(
+                                width: double.infinity,
+                                height: 36,
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Colors.amber),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  icon: const Icon(Icons.map, color: Colors.amber, size: 16),
+                                  label: const Text('فتح الموقع في خرائط جوجل 🗺️', style: TextStyle(color: Colors.amber, fontSize: 12)),
+                                  onPressed: () => _openMap(customerAddress),
+                                ),
                               ),
                               const SizedBox(height: 6),
                               Row(
