@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/app_state.dart';
 
 class PhoneAuthScreen extends StatefulWidget {
@@ -16,28 +16,24 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController(text: 'تعز - ديلوكس / بجوار الشارع العام');
 
   bool _isOtpSent = false;
   bool _isProfileStep = false;
   bool _isLoading = false;
 
-  // إحداثيات تعز الافتراضية للخرائط
-  static const LatLng _taizCenter = LatLng(13.5779, 44.0192);
-  GoogleMapController? _mapController;
-  LatLng _selectedLocation = _taizCenter;
-  Set<Marker> _markers = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _markers.add(
-      const Marker(
-        markerId: MarkerId('selected_location'),
-        position: _taizCenter,
-        infoWindow: InfoWindow(title: 'موقع التوصيل - تعز'),
-      ),
-    );
+  // دالة لفتح خرائط جوجل الخارجية لمساعدة المستخدم
+  Future<void> _openGoogleMapsSearch() async {
+    final Uri url = Uri.parse('https://www.google.com/maps/@13.5779,44.0219,15z');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح متصفح الخرائط')),
+        );
+      }
+    }
   }
 
   @override
@@ -69,7 +65,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           title: const Text(
-            'تعز إكسبرس - بوابة المصادقة والخرائط',
+            'تعز إكسبرس - بوابة المصادقة',
             style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
@@ -100,14 +96,14 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.map_outlined,
+                      Icons.flash_on,
                       size: 50,
                       color: primaryGold,
                     ),
                   ),
                   const SizedBox(height: 20),
 
-                  // ---------------- المرحلة الأولى: إدخال رقم الهاتف مع الفحص الذكي ----------------
+                  // ---------------- المرحلة الأولى: إدخال رقم الهاتف ----------------
                   if (!_isOtpSent && !_isProfileStep) ...[
                     const Text(
                       'تسجيل الدخول / حساب جديد',
@@ -159,14 +155,13 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                               }
                               setState(() => _isLoading = true);
 
-                              // فحص العميل وجلب بياناته القديمة إن وجدت دون مسحها
                               bool exists = await appState.checkAndLoginCustomer(phone);
 
                               if (exists && appState.userProfile != null) {
                                 setState(() {
                                   _isLoading = false;
                                   _nameController.text = appState.userProfile!['name'] ?? '';
-                                  _addressController.text = appState.userProfile!['address'] ?? '';
+                                  _addressController.text = appState.userProfile!['address'] ?? 'تعز - ديلوكس';
                                   _isProfileStep = true;
                                 });
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -192,7 +187,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                     ),
                   ]
 
-                  // ---------------- المرحلة الثانية: إدخال رمز الـ OTP للعميل الجديد ----------------
+                  // ---------------- المرحلة الثانية: إدخال رمز الـ OTP ----------------
                   else if (_isOtpSent && !_isProfileStep) ...[
                     const Text(
                       'أدخل رمز التحقق (OTP)',
@@ -263,7 +258,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                     ),
                   ]
 
-                  // ---------------- المرحلة الثالثة: إدخال البيانات وتحديد الموقع عبر الخريطة ----------------
+                  // ---------------- المرحلة الثالثة: إدخال البيانات والعنوان ----------------
                   else if (_isProfileStep) ...[
                     const Text(
                       'استكمال وتأكيد البيانات الشخصية',
@@ -271,7 +266,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'تم جلب اسمك وعنوانك المسجل، يمكنك تحديثهما أو تحديد موقعك بدقة على الخريطة',
+                      'أدخل اسمك وعنوانك التفصيلي بدقة في تعز',
                       style: TextStyle(color: Colors.grey, fontSize: 13),
                       textAlign: TextAlign.center,
                     ),
@@ -300,7 +295,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       controller: _addressController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        labelText: 'العنوان التفصيلي (اسم الحي / الشارع)',
+                        labelText: 'العنوان التفصيلي (مثال: ديلوكس، شارع جمال)',
                         labelStyle: const TextStyle(color: Colors.grey),
                         prefixIcon: const Icon(Icons.location_on, color: primaryGold),
                         filled: true,
@@ -315,42 +310,20 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    // 👈 خريطة جوجل `google_maps_flutter` لتحديد الموقع بدقة
-                    const Align(
-                      alignment: Alignment.centerRight,
-                      child: Text('حدد موقعك الجغرافي على الخريطة 🗺️:', style: TextStyle(color: primaryGold, fontWeight: FontWeight.bold, fontSize: 14)),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 200,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: GoogleMap(
-                          initialCameraPosition: const CameraPosition(target: _taizCenter, zoom: 15),
-                          mapType: MapType.normal,
-                          markers: _markers,
-                          myLocationEnabled: true,
-                          myLocationButtonEnabled: true,
-                          onMapCreated: (controller) => _mapController = controller,
-                          onTap: (LatLng position) {
-                            setState(() {
-                              _selectedLocation = position;
-                              _markers = {
-                                Marker(
-                                  markerId: const MarkerId('selected_location'),
-                                  position: position,
-                                  infoWindow: InfoWindow(
-                                    title: 'موقع التوصيل المحدد',
-                                    snippet: '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}',
-                                  ),
-                                ),
-                              };
-                            });
-                          },
-                        ),
+                    const SizedBox(height: 15),
+
+                    // زر لفتح خرائط جوجل الخارجية للاستعانة بها عند الحاجة
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: primaryGold),
+                        minimumSize: const Size(double.infinity, 45),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
+                      icon: const Icon(Icons.map, color: primaryGold),
+                      label: const Text('فتح خرائط جوجل للاستدلال على الموقع 🗺️', style: TextStyle(color: primaryGold, fontWeight: FontWeight.bold)),
+                      onPressed: _openGoogleMapsSearch,
                     ),
+
                     const SizedBox(height: 25),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -360,11 +333,9 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       ),
                       onPressed: () async {
                         if (_nameController.text.trim().isNotEmpty && _addressController.text.trim().isNotEmpty) {
-                          String finalAddress = '${_addressController.text.trim()} [الإحداثيات: ${_selectedLocation.latitude.toStringAsFixed(4)}, ${_selectedLocation.longitude.toStringAsFixed(4)}]';
-                          
                           await appState.saveUserProfileDetails(
                             _nameController.text.trim(),
-                            finalAddress,
+                            _addressController.text.trim(),
                           );
                           await appState.requestLocationAndNotificationPermissions();
 
