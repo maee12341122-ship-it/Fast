@@ -55,6 +55,13 @@ class OrdersScreen extends StatelessWidget {
     final assignedCourier = order is Map ? (order['assigned_courier']?.toString() ?? 'لم يتم التعيين') : order.assignedCourier;
     final adminMessage = order is Map ? (order['admin_message']?.toString() ?? '') : '';
 
+    // 👈 استخراج بيانات الدفع (نقدي أو محافظ إلكترونية) لعرضها في تفاصيل الطلب
+    final paymentMethod = order is Map ? (order['payment_method']?.toString() ?? 'cash') : 'cash';
+    final paymentAccount = order is Map ? (order['payment_account']?.toString() ?? '') : '';
+    final paymentDisplay = paymentMethod == 'cash'
+        ? '💵 نقداً عند الاستلام'
+        : '💳 محفظة ($paymentMethod) - حساب: $paymentAccount';
+
     if (status == 'pricingSentToCustomer' && !_processedPricingOrders.contains(orderId)) {
       _processedPricingOrders.add(orderId);
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -134,6 +141,27 @@ class OrdersScreen extends StatelessWidget {
                             Text('📞 الهاتف: $customerPhone', style: const TextStyle(color: Colors.white70, fontSize: 13)),
                             Text('📍 العنوان: $address', style: const TextStyle(color: Colors.white70, fontSize: 13)),
                             const Divider(color: Colors.white12),
+                            
+                            // 👈 عرض طريقة الدفع في نافذة تفاصيل الطلب
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: paymentMethod == 'cash' ? Colors.green.withOpacity(0.15) : Colors.blue.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: paymentMethod == 'cash' ? Colors.green : Colors.blueAccent),
+                              ),
+                              child: Text(
+                                'طريقة الدفع: $paymentDisplay',
+                                style: TextStyle(
+                                  color: paymentMethod == 'cash' ? Colors.greenAccent : Colors.lightBlueAccent,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const Divider(color: Colors.white12),
+
                             Text('🛒 تفاصيل المنتجات:\n$itemsDesc', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
                             const Divider(color: Colors.white12),
                             Text('سعر المنتجات: $productsTotal ر.ي', style: const TextStyle(color: Colors.white70, fontSize: 13)),
