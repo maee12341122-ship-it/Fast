@@ -673,35 +673,37 @@ class AppState extends ChangeNotifier {
   }) async {
     userProfile = {'phone': phone, 'name': customerName, 'city': currentCity, 'address': address};
 
+    // 💡 تم تحديث الحقول لتتطابق 100% مع أعمدة جدول orders في سوبابيس (items_description, total_price, payment_method, payment_account)
     final orderData = {
-      'customer_name': customerName,
-      'phone': phone,
-      'address': address,
-      'items_desc': itemsDesc,
+      'customer_name': customerName.trim(),
+      'phone': phone.trim(),
+      'address': address.trim(),
+      'items_description': itemsDesc,
       'products_total': productsTotal,
-      'total_amount': productsTotal,
+      'total_price': productsTotal,
       'delivery_fee': 0.0,
+      'payment_method': paymentMethod,
+      'payment_account': paymentAccount,
       'assigned_courier': 'لم يتم التعيين',
       'status': 'waitingForPricing',
       'is_fee_sent': false,
       'admin_message': 'بانتظار تحديد رسوم التوصيل من المشرف',
-      'payment_method': paymentMethod,
-      'payment_account': paymentAccount,
       'date': DateTime.now().toString().split(' ')[0],
     };
 
     try {
       // إرسال الطلب الفعلي إلى قاعدة بيانات Supabase
-      await supabase.from('orders').insert(orderData);
+      final response = await supabase.from('orders').insert(orderData).select();
 
       // تفريغ السلة محلياً لضمان عدم بقاء المنتجات بعد إتمام الطلب بنجاح
       _cartItems.clear();
 
       addNotification('تم إرسال الطلب ⏳', 'طلبك بانتظار تحديد رسوم التوصيل من المشرف');
       notifyListeners();
-      debugPrint('🟢 تم حفظ الطلب في Supabase وتفريغ السلة بنجاح تام');
+      debugPrint('🟢 تم حفظ الطلب في Supabase وتفريغ السلة بنجاح تام: $response');
     } catch (e) {
       debugPrint('❌ خطأ حرج في إنشاء الطلب وإرساله لـ Supabase: $e');
+      rethrow;
     }
   }
 
