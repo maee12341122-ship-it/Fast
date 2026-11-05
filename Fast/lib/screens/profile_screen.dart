@@ -36,7 +36,7 @@ class ProfileScreen extends StatelessWidget {
     } else {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر فتح تطبيق الواتساب')),
+          const SnackBar(content: Text('تعذر فتح تطبيق الواتساب ❌')),
         );
       }
     }
@@ -55,7 +55,7 @@ class ProfileScreen extends StatelessWidget {
           backgroundColor: const Color(0xFF1E1E1E),
           elevation: 2,
           leading: onOpenDrawer == null ? null : IconButton(icon: const Icon(Icons.menu, color: AppConstants.gold), onPressed: onOpenDrawer),
-          title: const Text('حسابي الشخصي', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16)),
+          title: const Text('حسابي الشخصي 👤', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold, fontSize: 16)),
         ),
         body: user == null
             ? Center(
@@ -68,7 +68,7 @@ class ProfileScreen extends StatelessWidget {
                       const SizedBox(height: 16),
                       const Text('لم تقم بتسجيل بيانات حسابك بعد', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      const Text('سجل بياناتك للبدء في استخدام خدمات التوصيل', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                      const Text('سجل بياناتك للبدء في استخدام خدمات التوصيل السريع في تعز', style: TextStyle(color: Colors.grey, fontSize: 13), textAlign: TextAlign.center),
                       const SizedBox(height: 24),
                       FilledButton.icon(
                         style: FilledButton.styleFrom(
@@ -159,7 +159,7 @@ class ProfileScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('العناوين المحفوظة', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppConstants.gold)),
+                      const Text('العناوين المحفوظة 📍', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppConstants.gold)),
                       TextButton.icon(
                         style: TextButton.styleFrom(foregroundColor: AppConstants.gold),
                         onPressed: () => _addAddress(context), 
@@ -176,7 +176,10 @@ class ProfileScreen extends StatelessWidget {
                   ...user.addresses.map((address) => Card(
                     color: const Color(0xFF1E1E1E),
                     margin: const EdgeInsets.symmetric(vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: AppConstants.gold.withOpacity(0.2)),
+                    ),
                     child: ListTile(
                       leading: const Icon(Icons.location_on, color: AppConstants.gold),
                       title: Text(address.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -235,7 +238,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'الحساب في هذه النسخة محفوظ محلياً، وليس حساباً موثقاً عبر خادم.',
+                    'الحساب في هذه النسخة محفوظ محلياً ومزامن بسلاسة مع سوبابيس.',
                     style: TextStyle(color: Colors.grey, fontSize: 11), 
                     textAlign: TextAlign.center,
                   ),
@@ -311,7 +314,7 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Future<void> _addAddress(BuildContext context) async {
-    final areaController = TextEditingController(text: 'شارع جمال');
+    final areaController = TextEditingController(text: 'شارع جمال / ديلوكس');
     final detailsController = TextEditingController();
     LatLng? point;
     final saved = await showDialog<bool>(
@@ -329,7 +332,7 @@ class ProfileScreen extends StatelessWidget {
                 controller: areaController, 
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
-                  labelText: 'المنطقة',
+                  labelText: 'المنطقة (تعز)',
                   labelStyle: TextStyle(color: Colors.grey),
                   border: OutlineInputBorder(),
                   filled: true,
@@ -342,7 +345,7 @@ class ProfileScreen extends StatelessWidget {
                 maxLines: 2, 
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
-                  labelText: 'العنوان التفصيلي',
+                  labelText: 'العنوان التفصيلي (بجوار...)',
                   labelStyle: TextStyle(color: Colors.grey),
                   border: OutlineInputBorder(),
                   filled: true,
