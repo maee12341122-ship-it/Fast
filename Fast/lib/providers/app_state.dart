@@ -242,7 +242,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- مصادقة العميل والتحقق الذكي ---
+  // --- مصادقة العميل والتحقق الذكي (فحص عدم التكرار والكتابة الفوقية) ---
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
 
@@ -311,7 +311,13 @@ class AppState extends ChangeNotifier {
   bool verifyOtpAndLogin(String phone, String enteredOtp) {
     if (generatedDynamicOtp != null && enteredOtp == generatedDynamicOtp) {
       String cleanPhone = _normalizePhone(phone);
-      userProfile = {'phone': cleanPhone, 'name': '', 'city': currentCity, 'address': ''};
+      
+      // جلب البيانات السابقة إذا كانت موجودة مسبقاً في قاعدة البيانات
+      checkAndLoginCustomer(cleanPhone).then((exists) {
+        if (!exists) {
+          userProfile = {'phone': cleanPhone, 'name': '', 'city': currentCity, 'address': ''};
+        }
+      });
 
       SharedPreferences.getInstance().then((prefs) {
         prefs.setString('userPhone', cleanPhone);
@@ -348,6 +354,28 @@ class AppState extends ChangeNotifier {
 
       notifyListeners();
     }
+  }
+
+  void setUser({required String name, required String phone, required dynamic address}) {
+    String cleanPhone = _normalizePhone(phone);
+    String addressDetails = address is String ? address : (address.details ?? '');
+
+    userProfile = {
+      'phone': cleanPhone,
+      'name': name,
+      'city': currentCity,
+      'address': addressDetails,
+    };
+
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString('userPhone', cleanPhone);
+      prefs.setString('userName', name);
+      prefs.setString('userAddress', addressDetails);
+      prefs.setString('userCity', currentCity);
+    });
+
+    saveUserProfileDetails(name, addressDetails);
+    notifyListeners();
   }
 
   void logoutUser() async {
