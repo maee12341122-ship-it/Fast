@@ -1,12 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/notification_service.dart';
 import 'providers/app_state.dart';
 import 'screens/splash_screen.dart';
 
+// دالة معالجة الإشعارات في الخلفية (تعمل حتى لو التطبيق مغلق كلياً)
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  try {
+    await Firebase.initializeApp();
+    debugPrint("📥 تم استلام إشعار في الخلفية: ${message.messageId}");
+  } catch (e) {
+    debugPrint("⚠️ خطأ في معالجة إشعار الخلفية: $e");
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // تهيئة Firebase الأساسية لضمان عمل الإشعارات
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    debugPrint('⚠️ خطأ في تهيئة Firebase: $e');
+  }
 
   try {
     await Supabase.initialize(
