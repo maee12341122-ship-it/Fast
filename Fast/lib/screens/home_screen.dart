@@ -10,7 +10,7 @@ import 'admin_screen.dart';
 import 'customer/checkout_screen.dart';
 import 'auth/phone_auth_screen.dart';
 import 'courier_screen.dart';
-import 'chat_screen.dart';
+import 'package:fast/screens/chat_screen.dart';
 import 'customer/edit_profile_screen.dart'; // 👈 استيراد شاشة تعديل الحساب
 
 class HomeScreen extends StatefulWidget {
