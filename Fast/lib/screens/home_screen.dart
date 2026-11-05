@@ -31,6 +31,15 @@ class _HomeScreenState extends State<HomeScreen> {
   final Set<String> _shownPricingDialogs = {};
 
   @override
+  void initState() {
+    super.initState();
+    // 👈 طلب أذن الإشعارات والموقع تلقائياً فور فتح الشاشة الرئيسية ولأول مرة
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AppState>(context, listen: false).requestLocationAndNotificationPermissions();
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _customItemNameController.dispose();
@@ -370,12 +379,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          // 👈 استخدام IndexedStack لضمان عدم إعادة بناء الشاشات وعرض جسم التطبيق بسلاسة
           body: IndexedStack(
             index: _currentIndex,
             children: pages,
           ),
-          // 👈 شريط التنقل السفلي الرئيسي والوحيد في التطبيق (تم إزالة أي تكرار سابق)
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex,
             onTap: (index) {
