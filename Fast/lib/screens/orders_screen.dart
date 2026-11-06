@@ -14,6 +14,7 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
+  // تخزين معرفات الطلبات التي تم عرض الديالوج لها في هذه الجلسة لمنع تكراره نهائياً
   final Set<String> _processedPricingOrders = {};
 
   @override
@@ -38,7 +39,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
             : ListView.builder(
                 padding: const EdgeInsets.all(12),
                 itemCount: orders.length,
-                itemBuilder: (context, index) => _orderCard(context, orders[index]),
+                itemBuilder: (context, index) {
+                  final order = orders[index];
+                  final orderId = order is Map ? (order['id']?.toString() ?? '') : order.id;
+                  
+                  // 👈 تمرير الـ Key الفريد لكل كارد لمنع التداخل البصري والبياني
+                  return KeyedSubtree(
+                    key: ValueKey('order_$orderId'),
+                    child: _orderCard(context, order),
+                  );
+                },
               ),
       ),
     );
@@ -62,14 +72,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
     final paymentMethod = order is Map ? (order['payment_method']?.toString() ?? 'cash') : 'cash';
     final paymentAccount = order is Map ? (order['payment_account']?.toString() ?? '') : '';
     final paymentDisplay = paymentMethod == 'cash'
-        ? '💵 نقداً عند الاستلاستلام'
+        ? '💵 نقداً عند الاستلام'
         : '💳 محفظة ($paymentMethod) - حساب: $paymentAccount';
 
-    // ظهور الشاشة المنبثقة تلقائياً أول مرة
+    // 👈 المعالجة الذكية والمضبوطة لعدم تكرار فتح النافذة المنبثقة
     if (status == 'pricingSentToCustomer' && !_processedPricingOrders.contains(orderId)) {
       _processedPricingOrders.add(orderId);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showCustomerPricingDialog(context, appState, orderId, deliveryFee, totalPrice);
+        if (mounted) {
+          _showCustomerPricingDialog(context, appState, orderId, deliveryFee, totalPrice);
+        }
       });
     }
 
@@ -83,7 +95,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        // 👈 التعديل الجوهري: إذا ضغط العميل على الكارت أو مكان الحالة وكان الطلب بانتظار التسعيرة، تفتح النافذة فوراً!
         onTap: () {
           if (status == 'pricingSentToCustomer') {
             _showCustomerPricingDialog(context, appState, orderId, deliveryFee, totalPrice);
@@ -110,7 +121,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ),
               const Divider(color: Colors.white12, height: 20),
               
-              // تنبيه تفاعلي يوضح للعميل أنه يمكنه الضغط هنا لإظهار نافذة الموافقة
               if (status == 'pricingSentToCustomer') ...[
                 Container(
                   width: double.infinity,
@@ -234,7 +244,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Directionality(
+      builder: (dialogContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           backgroundColor: const Color(0xFF1E1E1E),
@@ -255,7 +265,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
               onPressed: () {
                 appState.customerCancelOrder(orderId);
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('تم رفض التسعيرة وإلغاء الطلب 🔴')),
                 );
@@ -270,7 +280,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ),
               onPressed: () {
                 appState.customerApprovePricing(orderId);
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('تمت الموافقة بنجاح، جاري إسناد الطلب للمندوب! 🚀')),
                 );
