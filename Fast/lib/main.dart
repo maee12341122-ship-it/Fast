@@ -11,8 +11,8 @@ void main() async {
 
   // 1. تهيئة OneSignal للإشعارات الخارجية (تعمل تلقائياً بدون تعديل ملفات أندرويد)
   try {
-    // استبدل "YOUR_ONESIGNAL_APP_ID" بمعرف تطبيقك الفعلي من لوحة تحكم OneSignal
-    OneSignal.initialize("YOUR_ONESIGNAL_APP_ID");
+    // تم وضع معرف التطبيق الخاص بك بنجاح
+    OneSignal.initialize("60850bed-4af8-4df1-a2f5-77411630f447");
     
     // طلب إذن الإشعارات من المستخدم (يظهر تلقائياً)
     OneSignal.Notifications.requestPermission(true);
