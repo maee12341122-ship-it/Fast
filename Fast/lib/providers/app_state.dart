@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
 import '../models/address_model.dart';
@@ -28,7 +29,6 @@ class AppState extends ChangeNotifier {
 
   // --- دوال مساعدة لجلب OneSignal Player ID لمختلف الأطراف من قاعدة البيانات ---
   
-  // 1. جلب Player ID للمستخدم (عميل، مندوب، مشرف)
   Future<String?> getPlayerIdForUser(String userId, String tableName) async {
     try {
       final response = await supabase
@@ -46,11 +46,10 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  // 2. جلب Player ID للمندوب بناءً على اسمه
   Future<String?> getCourierPlayerIdByName(String courierName) async {
     try {
       final response = await supabase
-          .from('couriers') // أو drivers حسب جدول المناديب لديك
+          .from('couriers')
           .select('onesignal_player_id')
           .eq('name', courierName.trim())
           .maybeSingle();
@@ -64,7 +63,6 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  // 3. جلب معرفات جميع المشرفين لتنبيههم عند إلغاء أو رفض الطلبات
   Future<List<String>> getAllAdminPlayerIds() async {
     List<String> adminPlayerIds = [];
     try {
@@ -85,7 +83,6 @@ class AppState extends ChangeNotifier {
     return adminPlayerIds;
   }
 
-  // 4. جلب معرف الطرف الآخر في المحادثة (الشات المشترك)
   Future<String?> getReceiverPlayerIdForChat({
     required String orderId,
     required String senderRole,
@@ -231,32 +228,6 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // --- إرسال رمز التحقق القديم عبر رابط الواتساب (احتياطي) ---
-  Future<void> sendOtpViaWhatsAppDirect(String phone) async {
-    if (generatedDynamicOtp == null) return;
-
-    String formattedPhone = phone.trim();
-    if (formattedPhone.startsWith('0')) {
-      formattedPhone = '967${formattedPhone.substring(1)}';
-    } else if (!formattedPhone.startsWith('967')) {
-      formattedPhone = '967$formattedPhone';
-    }
-
-    final message = Uri.encodeComponent(
-        'مرحباً، رمز التحقق الخاص بك لتطبيق FAST هو: $generatedDynamicOtp'
-    );
-
-    final whatsappUrl = Uri.parse("https://wa.me/$formattedPhone?text=$message");
-
-    try {
-      if (await canLaunchUrl(whatsappUrl)) {
-        await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      debugPrint('❌ خطأ في فتح تطبيق الواتساب: $e');
-    }
-  }
-
   // --- مشاركة التطبيق ---
   void shareApp() {
     Share.share(
@@ -278,12 +249,12 @@ class AppState extends ChangeNotifier {
         debugPrint('📍 تم التعامل مع إذن الموقع بنجاح');
       }
 
-      bool notificationGranted = await NotificationService.requestNotificationPermission();
-      if (notificationGranted) {
-        debugPrint('🔔 تم منح إذن الإشعارات بنجاح');
+      try {
+        await OneSignal.Notifications.requestPermission(true);
+        debugPrint('🔔 تم طلب وتفعيل إذن الإشعارات بنجاح عبر OneSignal');
         addNotification('تطبيق FAST - تعز', 'تم تفعيل الإشعارات وتحديد الموقع بنجاح 🚀');
-      } else {
-        debugPrint('⚠️ تم رفض إذن الإشعارات');
+      } catch (e) {
+        debugPrint('⚠️ خطأ في طلب إذن الإشعارات: $e');
       }
 
     } catch (e) {
