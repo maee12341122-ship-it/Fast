@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart'; // 👈 لمسار فتح الخرائط الخارجية
+import 'package:url_launcher/url_launcher.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart'; // 👈 استدعاء حزمة خرائط جوجل للعرض المصغر
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import 'package:fast/screens/chat_screen.dart';
@@ -22,9 +23,8 @@ class DeliveryDashboard extends StatefulWidget {
 class _DeliveryDashboardState extends State<DeliveryDashboard> {
   String _status = 'available';
 
-  // 🗺️ دالة لفتح خرائط جوجل مباشرة وإرشاد المندوب للإحداثيات المستهدفة
+  // 🗺️ دالة لفتح خرائط جوجل الخارجية وإرشاد المندوب للإحداثيات المستهدفة
   Future<void> _openNavigation(String addressText) async {
-    // محاولة استخراج الإحداثيات إن وجدت في نص العنوان (مثال: الإحداثيات: 13.5779, 44.0219)
     final regExp = RegExp(r'الإحداثيات:\s*([0-9\.]+),\s*([0-9\.]+)');
     final match = regExp.firstMatch(addressText);
 
@@ -32,10 +32,8 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
     if (match != null) {
       final lat = match.group(1);
       final lng = match.group(2);
-      // فتح الخريطة بالدبوس المباشر للإحداثيات
       url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
     } else {
-      // إذا لم توجد إحداثيات، يتم البحث بالنص (العنوان المكتوب في تعز)
       url = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(addressText)}');
     }
 
@@ -48,6 +46,21 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
         );
       }
     }
+  }
+
+  // 📍 دالة مساعدة لاستخراج خطوط الطول والعرض من نص العنوان لعرضها في الخريطة المصغرة
+  LatLng? _extractLatLng(String addressText) {
+    final regExp = RegExp(r'الإحداثيات:\s*([0-9\.]+),\s*([0-9\.]+)');
+    final match = regExp.firstMatch(addressText);
+    if (match != null) {
+      final lat = double.tryParse(match.group(1) ?? '');
+      final lng = double.tryParse(match.group(2) ?? '');
+      if (lat != null && lng != null) {
+        return LatLng(lat, lng);
+      }
+    }
+    // الإحداثيات الافتراضية لمدينة تعز إن لم توجد إحداثيات مخزنة بالطلب
+    return const LatLng(13.5779, 44.0219);
   }
 
   @override
@@ -162,12 +175,13 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
                           final totalPrice = order['total_price']?.toString() ?? '0';
                           final status = order['status']?.toString() ?? '';
 
-                          // 👈 تفاصيل الدفع للمندوب
                           final paymentMethod = order['payment_method']?.toString() ?? 'cash';
                           final paymentAccount = order['payment_account']?.toString() ?? '';
                           final paymentDisplay = paymentMethod == 'cash'
                               ? '💵 تحصيل نقدي عند الاستلام ($totalPrice ر.ي)'
                               : '💳 مدفوع مسبقاً عبر ($paymentMethod) - حساب: $paymentAccount (لا تحصل نقداً)';
+
+                          final orderLatLng = _extractLatLng(address);
 
                           return Card(
                             color: const Color(0xFF1E1E1E),
@@ -194,9 +208,35 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
                                   Text('العنوان: $address', style: const TextStyle(color: Colors.white70)),
                                   const SizedBox(height: 6),
                                   Text('المنتجات: $itemsDesc', style: const TextStyle(color: Colors.white, fontSize: 13)),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 10),
 
-                                  // 👈 زر التوجيه عبر خرائط جوجل للمندوب
+                                  // 🗺️ عنصر خريطة مصغرة تفاعلية (Lite Mode) داخل بطاقة الطلب للمندوب
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: SizedBox(
+                                      height: 130,
+                                      width: double.infinity,
+                                      child: GoogleMap(
+                                        initialCameraPosition: CameraPosition(
+                                          target: orderLatLng ?? const LatLng(13.5779, 44.0219),
+                                          zoom: 15,
+                                        ),
+                                        markers: {
+                                          Marker(
+                                            markerId: MarkerId(orderId),
+                                            position: orderLatLng ?? const LatLng(13.5779, 44.0219),
+                                            infoWindow: InfoWindow(title: 'موقع العميل: $customerName'),
+                                          ),
+                                        },
+                                        liteModeEnabled: true, // خريطة خفيفة ومناسبة داخل القوائم الطويلة
+                                        zoomControlsEnabled: false,
+                                        myLocationButtonEnabled: false,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+
+                                  // 🧭 زر التوجيه عبر خرائط جوجل للمندوب
                                   SizedBox(
                                     width: double.infinity,
                                     child: OutlinedButton.icon(
@@ -212,7 +252,7 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
                                   ),
                                   const SizedBox(height: 8),
 
-                                  // 👈 حاوية توضيح طريقة الدفع للمندوب
+                                  // حاوية توضيح طريقة الدفع للمندوب
                                   Container(
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(8),
@@ -232,7 +272,7 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
                                   ),
                                   const SizedBox(height: 10),
 
-                                  // 👈 زر شات المندوب مع الإدارة
+                                  // زر شات المندوب مع الإدارة
                                   Align(
                                     alignment: Alignment.centerLeft,
                                     child: OutlinedButton.icon(
