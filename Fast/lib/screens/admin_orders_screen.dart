@@ -215,45 +215,49 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
         backgroundColor: const Color(0xFF1E1E1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('تحديد رسوم التوصيل للطلب #$orderId', style: const TextStyle(color: AppConstants.gold, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: feeController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'رسوم التوصيل (ر.ي)',
-                labelStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Color(0xFF121212),
-              ),
-            ),
-            const SizedBox(height: 15),
-            DropdownButtonFormField<String>(
-              value: selectedCourier,
-              dropdownColor: const Color(0xFF1E1E1E),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'اختر المندوب للتوصيل',
-                labelStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Color(0xFF121212),
-              ),
-              items: appState.couriers.map<DropdownMenuItem<String>>((courier) {
-                String courierName = courier['name']?.toString() ?? 'مندوب';
-                return DropdownMenuItem<String>(
-                  value: courierName,
-                  child: Text(courierName, style: const TextStyle(color: Colors.white)),
-                );
-              }).toList(),
-              onChanged: (val) {
-                selectedCourier = val;
-              },
-            ),
-          ],
+        content: Consumer<AppState>(
+          builder: (context, state, child) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: feeController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'رسوم التوصيل (ر.ي)',
+                    labelStyle: TextStyle(color: Colors.grey),
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Color(0xFF121212),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                DropdownButtonFormField<String>(
+                  value: selectedCourier,
+                  dropdownColor: const Color(0xFF1E1E1E),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'اختر المندوب للتوصيل',
+                    labelStyle: TextStyle(color: Colors.grey),
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Color(0xFF121212),
+                  ),
+                  items: state.couriers.map<DropdownMenuItem<String>>((courier) {
+                    String courierName = courier['name']?.toString() ?? 'مندوب';
+                    return DropdownMenuItem<String>(
+                      value: courierName,
+                      child: Text(courierName, style: const TextStyle(color: Colors.white)),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    selectedCourier = val;
+                  },
+                ),
+              ],
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -284,11 +288,19 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
               // 1. حفظ التحديثات في قاعدة البيانات
               appState.setOrderDeliveryFee(orderId, fee, selectedCourier!);
 
-              // 2. إرسال إشعار للعميل عبر رقم الهاتف
+              // 2. إرسال إشعار للعميل عبر رقم الهاتف (تم التصحيح للاعتماد على عمود phone في جدول customers)
               try {
                 String customerPhone = order['phone']?.toString() ?? '';
                 if (customerPhone.isNotEmpty) {
-                  String? customerPlayerId = await appState.getPlayerIdForUser(customerPhone, 'customers');
+                  // جلب الـ Player ID للعميل باستخدام رقم الهاتف (Phone) كمعرف فريد
+                  final custRes = await appState.supabase
+                      .from('customers')
+                      .select('onesignal_player_id')
+                      .eq('phone', appState.toString() == '' ? customerPhone : appState.supabase.toString().isNotEmpty ? customerPhone : customerPhone)
+                      .maybeSingle();
+                      
+                  String? customerPlayerId = custRes?['onesignal_player_id']?.toString();
+                  
                   if (customerPlayerId != null && customerPlayerId.isNotEmpty) {
                     await NotificationService.sendNotificationToUser(
                       targetPlayerId: customerPlayerId,
