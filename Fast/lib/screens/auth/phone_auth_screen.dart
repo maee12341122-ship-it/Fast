@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // 👈 استيراد سوبابيس لتحديث الـ Player ID
+import 'package:onesignal_flutter/onesignal_flutter.dart'; // 👈 استيراد مكتبة OneSignal
 import '../../providers/app_state.dart';
 import '../../services/notification_service.dart'; 
 import 'map_location_screen.dart'; // 👈 استدعاء شاشة الخريطة التفاعلية
@@ -105,7 +107,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                 ],
               ),
               child: Column(
-                mainAxisSize: min,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -350,13 +352,30 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       ),
                       onPressed: () async {
                         if (_nameController.text.trim().isNotEmpty && _addressController.text.trim().isNotEmpty) {
+                          // 1. حفظ بيانات الملف الشخصي
                           await appState.saveUserProfileDetails(
                             _nameController.text.trim(),
                             _addressController.text.trim(),
                           );
                           
+                          // 2. طلب أذونات الموقع والإشعارات
                           await appState.requestLocationAndNotificationPermissions();
 
+                          // 3. حفظ الـ OneSignal Player ID في جدول العملاء بسوبابيس فوراً
+                          try {
+                            String? playerId = OneSignal.User.pushSubscription.id;
+                            if (playerId != null && playerId.isNotEmpty && appState.currentUserId != null) {
+                              await Supabase.instance.client
+                                  .from('customers')
+                                  .update({'onesignal_player_id': playerId})
+                                  .eq('phone', appState.currentUserId!);
+                              debugPrint('✅ تم حفظ وتحديث OneSignal Player ID بنجاح: $playerId');
+                            }
+                          } catch (e) {
+                            debugPrint('❌ خطأ أثناء حفظ Player ID في تسجيل الدخول: $e');
+                          }
+
+                          // 4. حفظ Player ID عبر NotificationService أيضاً للتأكد
                           if (appState.currentUserId != null) {
                             await NotificationService.saveUserPlayerId(
                               appState.currentUserId!, 
