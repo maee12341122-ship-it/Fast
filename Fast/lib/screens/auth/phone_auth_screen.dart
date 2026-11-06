@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../providers/app_state.dart';
-import '../../services/notification_service.dart'; // 👈 استيراد خدمة الإشعارات لتفعيل حفظ Player ID
+import '../../services/notification_service.dart'; 
+import 'map_location_screen.dart'; // 👈 استدعاء شاشة الخريطة التفاعلية
 
 class PhoneAuthScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess;
@@ -23,15 +23,32 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   bool _isProfileStep = false;
   bool _isLoading = false;
 
-  // دالة لفتح خرائط جوجل الخارجية لمساعدة المستخدم
-  Future<void> _openGoogleMapsSearch() async {
-    final Uri url = Uri.parse('https://www.google.com/maps/@13.5779,44.0219,15z');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
+  // 🗺️ دالة لفتح الخريطة التفاعلية واستقبال البيانات المرتجعة منها
+  Future<void> _openInteractiveMap() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const MapLocationScreen(),
+      ),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      final address = result['address'] as String?;
+      final latLng = result['latLng'];
+
+      setState(() {
+        if (address != null && address.isNotEmpty) {
+          if (latLng != null) {
+            _addressController.text = '$address (الإحداثيات: ${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)})';
+          } else {
+            _addressController.text = address;
+          }
+        }
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر فتح متصفح الخرائط')),
+          const SnackBar(content: Text('تم تحديد موقعك ونقل الإحداثيات بنجاح! 📍')),
         );
       }
     }
@@ -88,7 +105,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                 ],
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize: min,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -169,7 +186,6 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                                   const SnackBar(content: Text('تم العثور على حسابك السابق واسترجاع بياناتك بنجاح! ✅')),
                                 );
                               } else {
-                                // طلب وإرسال الرمز تلقائياً عبر Meta Cloud API في الخلفية
                                 appState.requestOtpForPhone(phone);
 
                                 setState(() {
@@ -313,7 +329,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                     ),
                     const SizedBox(height: 15),
 
-                    // زر لفتح خرائط جوجل الخارجية للاستعانة بها عند الحاجة
+                    // 🗺️ زر يفتح خريطة جوجل التفاعلية المباشرة بدلاً من المتصفح الخارجي
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: primaryGold),
@@ -321,8 +337,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       icon: const Icon(Icons.map, color: primaryGold),
-                      label: const Text('فتح خرائط جوجل للاستدلال على الموقع 🗺️', style: TextStyle(color: primaryGold, fontWeight: FontWeight.bold)),
-                      onPressed: _openGoogleMapsSearch,
+                      label: const Text('تحديد موقعك عبر الخريطة التفاعلية 🗺️', style: TextStyle(color: primaryGold, fontWeight: FontWeight.bold)),
+                      onPressed: _openInteractiveMap,
                     ),
 
                     const SizedBox(height: 25),
@@ -334,16 +350,13 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       ),
                       onPressed: () async {
                         if (_nameController.text.trim().isNotEmpty && _addressController.text.trim().isNotEmpty) {
-                          // 1. حفظ بيانات المستخدم في قاعدة البيانات عبر الـ Provider
                           await appState.saveUserProfileDetails(
                             _nameController.text.trim(),
                             _addressController.text.trim(),
                           );
                           
-                          // 2. طلب أذونات الموقع والإشعارات
                           await appState.requestLocationAndNotificationPermissions();
 
-                          // 3. 👈 حفظ OneSignal Player ID الخاص بهذا العميل في جدول قاعدة البيانات (customers أو profiles)
                           if (appState.currentUserId != null) {
                             await NotificationService.saveUserPlayerId(
                               appState.currentUserId!, 
