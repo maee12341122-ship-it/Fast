@@ -388,7 +388,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- مصادقة العميل والتحقق الذكي ---
+  // --- مصادقة العميل والتحقق الذكي وضبط جلسة فريدة برقم واحد ---
   Map<String, String>? userProfile;
   String? generatedDynamicOtp;
 
@@ -404,6 +404,30 @@ class AppState extends ChangeNotifier {
     final city = prefs.getString('userCity') ?? currentCity;
 
     if (phone != null && phone.isNotEmpty) {
+      // التحقق الفعلي من قاعدة البيانات لضمان بقاء الجلسة الوحيدة والفريدة
+      try {
+        final cleanPhone = _normalizePhone(phone);
+        final response = await supabase
+            .from('customers')
+            .select()
+            .eq('phone', cleanPhone)
+            .maybeSingle();
+
+        if (response != null) {
+          userProfile = {
+            'phone': cleanPhone,
+            'name': response['name']?.toString() ?? name ?? '',
+            'city': city,
+            'address': response['address']?.toString() ?? address ?? '',
+          };
+          notifyListeners();
+          return;
+        }
+      } catch (e) {
+        debugPrint('⚠️ خطأ في استعادة الجلسة الفريدة: $e');
+      }
+
+      // Fallback محلي إذا لم يتوفر اتصال فوري
       userProfile = {
         'phone': phone,
         'name': name ?? '',
@@ -417,6 +441,8 @@ class AppState extends ChangeNotifier {
   Future<bool> checkAndLoginCustomer(String phone) async {
     try {
       String cleanPhone = _normalizePhone(phone);
+      
+      // جلب سجل العميل الفريد المرتبط برقم الهاتف من قاعدة البيانات
       final response = await supabase
           .from('customers')
           .select()
@@ -427,6 +453,7 @@ class AppState extends ChangeNotifier {
         String name = response['name']?.toString() ?? '';
         String address = response['address']?.toString() ?? '';
 
+        // اعتماد الجلسة الفريدة الحصرية لهذا الرقم فقط
         userProfile = {
           'phone': cleanPhone,
           'name': name,
@@ -495,6 +522,7 @@ class AppState extends ChangeNotifier {
       prefs.setString('userAddress', address);
 
       try {
+        // استخدام upsert مع الاعتماد على رقم الهاتف كمعرف فريد (Constraint/Unique) لعدم تكرار السجلات
         await supabase.from('customers').upsert({
           'phone': phone,
           'name': name,
