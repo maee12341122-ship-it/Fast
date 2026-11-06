@@ -1,91 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'services/notification_service.dart';
 import 'providers/app_state.dart';
 import 'screens/splash_screen.dart';
 
-// تعريف القناة المحلية لإظهار الإشعارات فوق الشاشة (Heads-up)
-const AndroidNotificationChannel highImportanceChannel = AndroidNotificationChannel(
-  'high_importance_channel', // نفس الـ ID المعرف في AndroidManifest
-  'إشعارات الطلبات الهامة', // اسم القناة للمستخدم
-  description: 'هذه القناة مخصصة لإشعارات الطلبات والتحديثات الحية.',
-  importance: Importance.max,
-  priority: Priority.high,
-  playSound: true,
-);
-
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
-
-// دالة معالجة الإشعارات في الخلفية (تعمل حتى لو التطبيق مغلق كلياً)
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  try {
-    await Firebase.initializeApp();
-    debugPrint("📥 تم استلام إشعار في الخلفية: ${message.messageId}");
-
-    // إظهار الإشعار في شريط الإشعارات العلوي حتى لو كان التطبيق مغلقاً
-    RemoteNotification? notification = message.notification;
-    AndroidNotification? android = message.notification?.android;
-
-    if (notification != null && android != null) {
-      await flutterLocalNotificationsPlugin.show(
-        notification.hashCode,
-        notification.title,
-        notification.body,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            highImportanceChannel.id,
-            highImportanceChannel.name,
-            channelDescription: highImportanceChannel.description,
-            icon: '@mipmap/ic_launcher',
-            importance: Importance.max,
-            priority: Priority.high,
-          ),
-        ),
-      );
-    }
-  } catch (e) {
-    debugPrint("⚠️ خطأ في معالجة إشعار الخلفية: $e");
-  }
-}
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. تهيئة Firebase الأساسية ودالة الخلفية
+  // 1. تهيئة OneSignal للإشعارات الخارجية (تعمل تلقائياً بدون تعديل ملفات أندرويد)
   try {
-    await Firebase.initializeApp();
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    // إنشاء قناة الإشعارات على نظام أندرويد
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(highImportanceChannel);
-
-    // طلب صلاحيات الإشعارات لأندرويد 13+ و iOS
-    NotificationSettings settings =
-        await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    debugPrint('🔔 حالة صلاحيات الإشعارات: ${settings.authorizationStatus}');
-
-    // ضبط خيارات العرض في الواجهة الأمامية والخلفية
-    await FirebaseMessaging.instance
-        .setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    // استبدل "YOUR_ONESIGNAL_APP_ID" بمعرف تطبيقك الفعلي من لوحة تحكم OneSignal
+    OneSignal.initialize("YOUR_ONESIGNAL_APP_ID");
+    
+    // طلب إذن الإشعارات من المستخدم (يظهر تلقائياً)
+    OneSignal.Notifications.requestPermission(true);
+    
+    debugPrint("✅ تمت تهيئة OneSignal بنجاح");
   } catch (e) {
-    debugPrint('⚠️ خطأ في تهيئة Firebase: $e');
+    debugPrint('⚠️ خطأ في تهيئة OneSignal: $e');
   }
 
   // 2. تهيئة Supabase
