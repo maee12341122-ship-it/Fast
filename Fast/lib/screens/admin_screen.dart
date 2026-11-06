@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart'; // 👈 استيراد مكتبة OneSignal
+import 'package:supabase_flutter/supabase_flutter.dart'; // 👈 استيراد سوبابيس لتحديث الـ Player ID
 import '../providers/app_state.dart';
 import '../models/product_model.dart';
 import 'package:fast/screens/chat_screen.dart';
@@ -370,6 +372,7 @@ class _AdminScreenState extends State<AdminScreen> {
           else
             ...appState.couriers.map((courier) {
               final courierName = courier['name'].toString();
+              final courierId = courier['id']?.toString() ?? courier['delivery_man_id']?.toString() ?? '';
               double totalDeliveryFees = 0.0;
               int completedOrdersCount = 0;
               for (var order in appState.orders) {
@@ -392,10 +395,41 @@ class _AdminScreenState extends State<AdminScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('🛵 المندوب: $courierName', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                            child: Text('العمولة: ${adminCommission.toStringAsFixed(0)} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 13)),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                                child: Text('العمولة: ${adminCommission.toStringAsFixed(0)} ر.ي', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 13)),
+                              ),
+                              // 👈 زر سريع لتحديث OneSignal Player ID للمندوب
+                              IconButton(
+                                icon: const Icon(Icons.notifications_active, color: Colors.amberAccent, size: 20),
+                                tooltip: 'ربط وتحديث OneSignal Player ID للمندوب',
+                                onPressed: () async {
+                                  try {
+                                    String? playerId = OneSignal.User.pushSubscription.id;
+                                    if (playerId != null && playerId.isNotEmpty && courierId.isNotEmpty) {
+                                      await Supabase.instance.client
+                                          .from('couriers')
+                                          .update({'onesignal_player_id': playerId})
+                                          .eq('id', courierId);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('تم تحديث OneSignal Player ID للمندوب بنجاح! 🔔')),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('لم يتم العثور على معرّف OneSignal للجهاز حالياً ❌')),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('خطأ: $e')),
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -425,9 +459,21 @@ class _AdminScreenState extends State<AdminScreen> {
           const SizedBox(height: 20),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, minimumSize: const Size(double.infinity, 45), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            onPressed: () {
+            onPressed: () async {
               if (_courierNameController.text.isNotEmpty && _courierUsernameController.text.isNotEmpty) {
                 appState.addCourier(_courierNameController.text, _courierPhoneController.text, _courierUsernameController.text, _courierPasswordController.text);
+                
+                // 👈 [تحديث OneSignal Player ID للمندوب الجديد تلقائياً إذا أضيف من جهاز المشرف أو جهاز المندوب]
+                try {
+                  String? playerId = OneSignal.User.pushSubscription.id;
+                  if (playerId != null && playerId.isNotEmpty) {
+                    await Supabase.instance.client
+                        .from('couriers')
+                        .update({'onesignal_player_id': playerId})
+                        .eq('phone', _courierPhoneController.text.trim());
+                  }
+                } catch (_) {}
+
                 _courierNameController.clear();
                 _courierPhoneController.clear();
                 _courierUsernameController.clear();
@@ -459,10 +505,22 @@ class _AdminScreenState extends State<AdminScreen> {
           const SizedBox(height: 20),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, minimumSize: const Size(double.infinity, 45), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            onPressed: () {
+            onPressed: () async {
               final start = int.tryParse(startController.text) ?? 8;
               final end = int.tryParse(endController.text) ?? 24;
               appState.updateStoreSettings(start, end);
+
+              // 👈 [تحديث OneSignal Player ID للمشرف تلقائياً عند حفظ الإعدادات لضمان عدم بقائه null]
+              try {
+                String? adminPlayerId = OneSignal.User.pushSubscription.id;
+                if (adminPlayerId != null && adminPlayerId.isNotEmpty) {
+                  await Supabase.instance.client
+                      .from('admins')
+                      .update({'onesignal_player_id': adminPlayerId})
+                      .eq('username', 'admin');
+                }
+              } catch (_) {}
+
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث أوقات الدوام وحفظها سحابياً بنجاح! ✅')));
             },
             child: const Text('حفظ وتحديث أوقات الدوام', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
