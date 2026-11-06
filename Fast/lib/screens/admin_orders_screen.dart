@@ -14,9 +14,6 @@ class AdminOrdersScreen extends StatefulWidget {
 }
 
 class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTickerProviderStateMixin {
-  // خريطة لتخزين حالة القفل لكل طلب على حدة (مفتاحها رقم الطلب)
-  final Map<String, bool> _feeLockedState = {};
-
   @override
   Widget build(BuildContext context) {
     final orders = context.watch<AppState>().orders;
@@ -53,20 +50,18 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                   final assignedCourier = order['assigned_courier']?.toString() ?? 'لم يتم التعيين';
                   final adminMessage = order['admin_message']?.toString() ?? '';
 
-                  // 👈 استخراج بيانات الدفع (نقدي أو محافظ إلكترونية مع رقم الحساب)
+                  // بيانات الدفع
                   final paymentMethod = order['payment_method']?.toString() ?? 'cash';
                   final paymentAccount = order['payment_account']?.toString() ?? '';
                   final paymentDisplay = paymentMethod == 'cash'
                       ? '💵 نقداً عند الاستلام (Cash)'
                       : '💳 محفظة إلكترونية ($paymentMethod) - حساب: $paymentAccount';
 
-                  // هل تم إرسال التسعيرة من قبل؟
-                  bool isLocked = _feeLockedState.putIfAbsent(
-                    orderId, 
-                    () => status != 'waitingForPricing'
-                  );
+                  // 👈 الاعتماد على حالة الطلب في سوبابيس لمعرفة هل تم التسعير أم لا بشكل تلقائي ولحظي
+                  bool isAlreadyPriced = status != 'waitingForPricing';
 
                   return AnimatedContainer(
+                    key: ValueKey(orderId), // 👈 مفتاح فريد لمنع تداخل الحالة واختفاء المشاكل البصرية
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
                     child: Card(
@@ -82,7 +77,6 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // --- رأس الكارت (رقم الطلب والحالة بتصميم عصري) ---
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -105,8 +99,6 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                               ],
                             ),
                             const Divider(height: 20, color: Colors.white12),
-
-                            // --- بيانات العميل والطلب ---
                             Row(
                               children: [
                                 const Icon(Icons.person, size: 16, color: AppConstants.gold),
@@ -141,8 +133,6 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                               child: Text('🛒 المنتجات: $itemsDesc', style: const TextStyle(color: Colors.white, fontSize: 13)),
                             ),
                             const SizedBox(height: 10),
-
-                            // 👈 حاوية عرض طريقة الدفع ورقم الحساب بوضوح للمشرف
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(10),
@@ -161,13 +151,11 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                               ),
                             ),
                             const Divider(height: 20, color: Colors.white12),
-
-                            // --- الحسابات المالية مع خيار التعديل المقفل ---
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('سعر المنتجات: $productsTotal ر.ي', style: const TextStyle(color: Colors.white70)),
-                                Text('رسوم التوصيل: $deliveryFee ر.ي', style: TextStyle(color: isLocked ? Colors.white70 : AppConstants.gold, fontWeight: FontWeight.bold)),
+                                Text('رسوم التوصيل: $deliveryFee ر.ي', style: const TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold)),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -175,19 +163,6 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('الإجمالي الكلي: $totalPrice ر.ي', style: const TextStyle(fontWeight: FontWeight.bold, color: AppConstants.gold, fontSize: 15)),
-                                IconButton(
-                                  icon: Icon(
-                                    isLocked ? Icons.edit : Icons.lock, 
-                                    color: isLocked ? AppConstants.gold : Colors.greenAccent,
-                                    size: 20,
-                                  ),
-                                  tooltip: isLocked ? 'تعديل رسوم التوصيل' : 'قفل الرسوم',
-                                  onPressed: () {
-                                    setState(() {
-                                      _feeLockedState[orderId] = !isLocked;
-                                    });
-                                  },
-                                ),
                               ],
                             ),
                             const SizedBox(height: 6),
@@ -198,33 +173,30 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                                 Text('المندوب: $assignedCourier', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
                               ],
                             ),
-                            
                             if (adminMessage.isNotEmpty) ...[
                               const SizedBox(height: 6),
                               Text('💬 حالة المشرف: $adminMessage', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                             ],
-                            
                             const SizedBox(height: 14),
 
-                            // --- زر تحديد رسوم التوصيل وإسناد المندوب ---
-                            if (status == 'waitingForPricing' || !isLocked)
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppConstants.gold,
-                                    foregroundColor: Colors.black,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                  onPressed: () => _showPricingDialog(context, appState, orderId),
-                                  icon: const Icon(Icons.local_shipping),
-                                  label: Text(
-                                    status == 'waitingForPricing' ? 'تحديد رسوم التوصيل وإسناد المندوب 🚀' : 'تحديث وإعادة إرسال التسعيرة 🔄', 
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
+                            // --- زر تحديد أو تحديث رسوم التوصيل ---
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isAlreadyPriced ? Colors.blueGrey : AppConstants.gold,
+                                  foregroundColor: isAlreadyPriced ? Colors.white : Colors.black,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                                onPressed: () => _showPricingDialog(context, appState, orderId, deliveryFee),
+                                icon: Icon(isAlreadyPriced ? Icons.edit : Icons.local_shipping),
+                                child: Text(
+                                  isAlreadyPriced ? 'تعديل رسوم التوصيل والمندوب 🔄' : 'تحديد رسوم التوصيل وإسناد المندوب 🚀', 
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ),
+                            ),
                           ],
                         ),
                       ),
@@ -236,14 +208,14 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
     );
   }
 
-  // --- نافذة إدخال رسوم التوصيل واختيار المندوب بتصميم متناسق ---
-  void _showPricingDialog(BuildContext context, AppState appState, dynamic orderId) {
-    final feeController = TextEditingController();
+  // --- نافذة إدخال رسوم التوصيل ---
+  void _showPricingDialog(BuildContext context, AppState appState, dynamic orderId, double currentFee) {
+    final feeController = TextEditingController(text: currentFee > 0 ? currentFee.toString() : '');
     String? selectedCourier;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('تحديد رسوم التوصيل للطلب #$orderId', style: const TextStyle(color: AppConstants.gold, fontSize: 16)),
@@ -289,7 +261,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('إغلاق', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
@@ -313,12 +285,10 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                 return;
               }
 
+              // حفظ التحديثات وإرسالها لقاعدة البيانات
               appState.setOrderDeliveryFee(orderId, fee, selectedCourier!);
-              setState(() {
-                _feeLockedState[orderId.toString()] = true;
-              });
               
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
 
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('تم إرسال رسوم التوصيل وإسناد المندوب للعميل بنجاح! 🚀')),
