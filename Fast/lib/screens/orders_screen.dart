@@ -17,6 +17,7 @@ class AdminOrdersScreen extends StatefulWidget {
 class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
+    // 👈 استخدام context.watch لجعل الشاشة بأكملها تتحدث لحظياً Real-time عند تغير الطلبات
     final orders = context.watch<AppState>().orders;
     final appState = context.read<AppState>();
 
@@ -190,7 +191,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
-                                onPressed: () => _showPricingDialog(context, appState, order, orderId, deliveryFee),
+                                onPressed: () => _showPricingDialog(context, appState, orderId, deliveryFee, assignedCourier),
                                 icon: Icon(isAlreadyPriced ? Icons.edit : Icons.local_shipping),
                                 child: Text(
                                   isAlreadyPriced ? 'تعديل رسوم التوصيل والمندوب 🔄' : 'تحديد رسوم التوصيل وإسناد المندوب 🚀', 
@@ -209,10 +210,10 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
     );
   }
 
-  // --- نافذة إدخال رسوم التوصيل مع إرسال التنبيهات ---
-  void _showPricingDialog(BuildContext context, AppState appState, Map<String, dynamic> order, dynamic orderId, double currentFee) {
+  // --- نافذة إدخال رسوم التوصيل مع إرسال التنبيهات (مدعومة بالوقت الفعلي عبر Consumer) ---
+  void _showPricingDialog(BuildContext context, AppState appState, dynamic orderId, double currentFee, String currentCourier) {
     final feeController = TextEditingController(text: currentFee > 0 ? currentFee.toString() : '');
-    String? selectedCourier = order['assigned_courier'] != 'لم يتم التعيين' ? order['assigned_courier'] : null;
+    String? selectedCourier = currentCourier != 'لم يتم التعيين' ? currentCourier : null;
 
     showDialog(
       context: context,
@@ -220,45 +221,55 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
         backgroundColor: const Color(0xFF1E1E1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('تحديد رسوم التوصيل للطلب #$orderId', style: const TextStyle(color: AppConstants.gold, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: feeController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'رسوم التوصيل (ر.ي)',
-                labelStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Color(0xFF121212),
-              ),
-            ),
-            const SizedBox(height: 15),
-            DropdownButtonFormField<String>(
-              value: selectedCourier,
-              dropdownColor: const Color(0xFF1E1E1E),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'اختر المندوب للتوصيل',
-                labelStyle: TextStyle(color: Colors.grey),
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Color(0xFF121212),
-              ),
-              items: appState.couriers.map<DropdownMenuItem<String>>((courier) {
-                String courierName = courier['name']?.toString() ?? 'مندوب';
-                return DropdownMenuItem<String>(
-                  value: courierName,
-                  child: Text(courierName, style: const TextStyle(color: Colors.white)),
-                );
-              }).toList(),
-              onChanged: (val) {
-                selectedCourier = val;
-              },
-            ),
-          ],
+        content: Consumer<AppState>(
+          builder: (context, state, child) {
+            // جلب أحدث بيانات الطلب والمندوبين بشكل لحظي Real-time داخل النافذة
+            final liveOrder = state.orders.firstWhere(
+              (o) => o['id'].toString() == orderId.toString(),
+              orElse: () => {},
+            );
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: feeController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'رسوم التوصيل (ر.ي)',
+                    labelStyle: TextStyle(color: Colors.grey),
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Color(0xFF121212),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                DropdownButtonFormField<String>(
+                  value: selectedCourier,
+                  dropdownColor: const Color(0xFF1E1E1E),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'اختر المندوب للتوصيل',
+                    labelStyle: TextStyle(color: Colors.grey),
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Color(0xFF121212),
+                  ),
+                  items: state.couriers.map<DropdownMenuItem<String>>((courier) {
+                    String courierName = courier['name']?.toString() ?? 'مندوب';
+                    return DropdownMenuItem<String>(
+                      value: courierName,
+                      child: Text(courierName, style: const TextStyle(color: Colors.white)),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    selectedCourier = val;
+                  },
+                ),
+              ],
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -289,9 +300,15 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
               // 1. حفظ التحديثات في قاعدة البيانات عبر الـ Provider
               appState.setOrderDeliveryFee(orderId, fee, selectedCourier!);
 
-              // 2. 👈 [الإضافة الجديدة]: جلب الـ Player ID الخاص بالعميل وإرسال إشعار فوري بأن السعر جاهز
+              // 2. جلب بيانات الطلب المحدثة لإرسال الإشعارات بدقة
+              final targetOrder = appState.orders.firstWhere(
+                (o) => o['id'].toString() == orderId.toString(),
+                orElse: () => {},
+              );
+
+              // 3. إرسال إشعار فوري للعميل بأن السعر جاهز
               try {
-                String? customerId = order['customer_id']?.toString() ?? order['user_id']?.toString();
+                String? customerId = targetOrder['customer_id']?.toString() ?? targetOrder['user_id']?.toString();
                 if (customerId != null) {
                   String? customerPlayerId = await appState.getPlayerIdForUser(customerId, 'customers');
                   if (customerPlayerId != null && customerPlayerId.isNotEmpty) {
@@ -306,7 +323,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                 debugPrint('⚠️ خطأ في إرسال إشعار للعميل: $e');
               }
 
-              // 3. 👈 إرسال إشعار للمندوب بأنه تم إسناد طلب جديد إليه
+              // 4. إرسال إشعار للمندوب بأنه تم إسناد طلب جديد إليه
               try {
                 String? courierPlayerId = await appState.getCourierPlayerIdByName(selectedCourier!);
                 if (courierPlayerId != null && courierPlayerId.isNotEmpty) {
