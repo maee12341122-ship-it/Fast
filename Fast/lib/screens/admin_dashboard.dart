@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart'; // 👈 استيراد مكتبة OneSignal
+import 'package:supabase_flutter/supabase_flutter.dart'; // 👈 استيراد سوبابيس لتحديث الـ Player ID
 
 import '../models/delivery_model.dart';
 import '../models/order_model.dart';
@@ -254,7 +256,7 @@ class AdminCouriersTab extends StatelessWidget {
                     isThreeLine: true,
                     trailing: PopupMenuButton<String>(
                       color: const Color(0xFF1E1E1E),
-                      onSelected: (value) {
+                      onSelected: (value) async {
                         if (value == 'toggle') {
                           try {
                             state.updateCourier(courier.copyWith(isEnabled: !courier.isEnabled));
@@ -267,12 +269,35 @@ class AdminCouriersTab extends StatelessWidget {
                           state.setCourierAvailability(courier.id, !courier.isAvailable);
                         } else if (value == 'delete') {
                           state.removeCourier(courier.id);
+                        } else if (value == 'update_token') {
+                          // 👈 [ميزة تحديث Player ID للمندوب يدوياً لتفعيل الإشعارات]
+                          try {
+                            String? playerId = OneSignal.User.pushSubscription.id;
+                            if (playerId != null && playerId.isNotEmpty) {
+                              await Supabase.instance.client
+                                  .from('couriers')
+                                  .update({'onesignal_player_id': playerId})
+                                  .eq('id', courier.id);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('تم تحديث OneSignal Player ID للمندوب بنجاح! 🔔')),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('لم يتم العثور على معرّف OneSignal للجهاز حالياً ❌')),
+                              );
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('خطأ: $e')),
+                            );
+                          }
                         }
                       },
                       itemBuilder: (_) => [
                         const PopupMenuItem(value: 'edit', child: Text('تعديل البيانات', style: TextStyle(color: Colors.white))),
-                        PopupMenuItem(value: 'toggle', child: Text(courier.isEnabled ? 'تعطيل المندوب' : 'تفعيل المندوب', style: const TextStyle(color: Colors.white))),
-                        PopupMenuItem(value: 'available', child: Text(courier.isAvailable ? 'جعله مشغولاً' : 'جعله متاحاً', style: const TextStyle(color: Colors.white))),
+                        PopupMenuItem(value: 'toggle', child: Text(courier.isEnabled ? 'تعطيل المندوب' : 'تفعيل المندوب', style: TextStyle(color: Colors.white))),
+                        PopupMenuItem(value: 'available', child: Text(courier.isAvailable ? 'جعله مشغولاً' : 'جعله متاحاً', style: TextStyle(color: Colors.white))),
+                        const PopupMenuItem(value: 'update_token', child: Text('ربط OneSignal Player ID 🔔', style: TextStyle(color: Colors.amberAccent))),
                         const PopupMenuItem(value: 'delete', child: Text('حذف المندوب', style: TextStyle(color: Colors.redAccent))),
                       ],
                     ),
@@ -356,6 +381,18 @@ class AdminCouriersTab extends StatelessWidget {
     if (saved && context.mounted) {
       try {
         context.read<AppState>().addCourier(name: nameController.text, phone: phoneController.text);
+        
+        // 👈 [تحديث OneSignal Player ID للمندوب الجديد تلقائياً إذا كان جهازه الحالي]
+        try {
+          String? playerId = OneSignal.User.pushSubscription.id;
+          if (playerId != null && playerId.isNotEmpty) {
+            await Supabase.instance.client
+                .from('couriers')
+                .update({'onesignal_player_id': playerId})
+                .eq('phone', phoneController.text.trim());
+          }
+        } catch (_) {}
+
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تمت إضافة المندوب بنجاح! 🛵')));
       } catch (error) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
@@ -415,7 +452,7 @@ class _AdminProductsSettingsTabState extends State<AdminProductsSettingsTab> {
         const SizedBox(height: 12),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: AppConstants.gold, foregroundColor: Colors.black),
-          onPressed: () {
+          onPressed: () async {
             final start = int.tryParse(_startController.text);
             final end = int.tryParse(_endController.text);
             final fee = int.tryParse(_feeController.text);
@@ -425,6 +462,18 @@ class _AdminProductsSettingsTabState extends State<AdminProductsSettingsTab> {
             }
             try {
               state.updateBusinessSettings(startHour: start, endHour: end, deliveryFee: fee);
+
+              // 👈 [تحديث OneSignal Player ID للمشرف عند حفظ أو تحديث الإعدادات لضمان عدم بقائه null]
+              try {
+                String? adminPlayerId = OneSignal.User.pushSubscription.id;
+                if (adminPlayerId != null && adminPlayerId.isNotEmpty) {
+                  await Supabase.instance.client
+                      .from('admins')
+                      .update({'onesignal_player_id': adminPlayerId})
+                      .eq('username', 'admin');
+                }
+              } catch (_) {}
+
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ الإعدادات بنجاح! ✅')));
             } catch (error) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
