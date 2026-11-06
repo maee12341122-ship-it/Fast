@@ -30,16 +30,30 @@ class AppState extends ChangeNotifier {
 
   // --- دوال مساعدة لجلب OneSignal Player ID لمختلف الأطراف من قاعدة البيانات ---
   
-  Future<String?> getPlayerIdForUser(String userId, String tableName) async {
+  Future<String?> getPlayerIdForUser(String userIdOrPhone, String tableName) async {
     try {
-      final response = await supabase
-          .from(tableName)
-          .select('onesignal_player_id')
-          .eq('id', userId)
-          .maybeSingle();
-      
-      if (response != null && response['onesignal_player_id'] != null) {
-        return response['onesignal_player_id'].toString();
+      // إذا كان الجدول هو العملاء (customers)، نبحث برقم الهاتف (phone) لضمان الدقة وتجنب null
+      if (tableName == 'customers') {
+        final response = await supabase
+            .from(tableName)
+            .select('onesignal_player_id')
+            .eq('phone', userIdOrPhone)
+            .maybeSingle();
+        
+        if (response != null && response['onesignal_player_id'] != null) {
+          return response['onesignal_player_id'].toString();
+        }
+      } else {
+        // لبقية الجداول بالـ id التقليدي
+        final response = await supabase
+            .from(tableName)
+            .select('onesignal_player_id')
+            .eq('id', userIdOrPhone)
+            .maybeSingle();
+        
+        if (response != null && response['onesignal_player_id'] != null) {
+          return response['onesignal_player_id'].toString();
+        }
       }
     } catch (e) {
       debugPrint('⚠️ خطأ في جلب Player ID للمستخدم من $tableName: $e');
@@ -317,6 +331,12 @@ class AppState extends ChangeNotifier {
         'start_hour': start,
         'end_hour': end,
       });
+
+      // 👈 تحديث OneSignal Player ID للمشرف تلقائياً عند حفظ الإعدادات
+      String? adminPlayerId = OneSignal.User.pushSubscription.id;
+      if (adminPlayerId != null && adminPlayerId.isNotEmpty) {
+        await supabase.from('admins').update({'onesignal_player_id': adminPlayerId}).eq('username', 'admin');
+      }
     } catch (e) {
       debugPrint('❌ خطأ في حفظ أوقات الدوام: $e');
     }
@@ -343,10 +363,19 @@ class AppState extends ChangeNotifier {
 
   Future<bool> loginAdminFromSupabase(String username, String password) async {
     try {
+      String? adminPlayerId = OneSignal.User.pushSubscription.id;
+
       if (username.trim().toLowerCase() == 'admin' && password.trim() == '123456') {
         isAdminLoggedIn = true;
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isAdminLoggedIn', true);
+
+        if (adminPlayerId != null && adminPlayerId.isNotEmpty) {
+          try {
+            await supabase.from('admins').update({'onesignal_player_id': adminPlayerId}).eq('username', 'admin');
+          } catch (_) {}
+        }
+
         notifyListeners();
         return true;
       }
@@ -362,6 +391,11 @@ class AppState extends ChangeNotifier {
             isAdminLoggedIn = true;
             final prefs = await SharedPreferences.getInstance();
             await prefs.setBool('isAdminLoggedIn', true);
+
+            if (adminPlayerId != null && adminPlayerId.isNotEmpty) {
+              await supabase.from('admins').update({'onesignal_player_id': adminPlayerId}).eq('username', dbUsername);
+            }
+
             notifyListeners();
             return true;
           }
@@ -404,7 +438,6 @@ class AppState extends ChangeNotifier {
     final city = prefs.getString('userCity') ?? currentCity;
 
     if (phone != null && phone.isNotEmpty) {
-      // التحقق الفعلي من قاعدة البيانات لضمان بقاء الجلسة الوحيدة والفريدة
       try {
         final cleanPhone = _normalizePhone(phone);
         final response = await supabase
@@ -427,7 +460,6 @@ class AppState extends ChangeNotifier {
         debugPrint('⚠️ خطأ في استعادة الجلسة الفريدة: $e');
       }
 
-      // Fallback محلي إذا لم يتوفر اتصال فوري
       userProfile = {
         'phone': phone,
         'name': name ?? '',
@@ -442,7 +474,6 @@ class AppState extends ChangeNotifier {
     try {
       String cleanPhone = _normalizePhone(phone);
       
-      // جلب سجل العميل الفريد المرتبط برقم الهاتف من قاعدة البيانات
       final response = await supabase
           .from('customers')
           .select()
@@ -453,7 +484,6 @@ class AppState extends ChangeNotifier {
         String name = response['name']?.toString() ?? '';
         String address = response['address']?.toString() ?? '';
 
-        // اعتماد الجلسة الفريدة الحصرية لهذا الرقم فقط
         userProfile = {
           'phone': cleanPhone,
           'name': name,
@@ -522,7 +552,6 @@ class AppState extends ChangeNotifier {
       prefs.setString('userAddress', address);
 
       try {
-        // استخدام upsert مع الاعتماد على رقم الهاتف كمعرف فريد (Constraint/Unique) لعدم تكرار السجلات
         await supabase.from('customers').upsert({
           'phone': phone,
           'name': name,
@@ -530,6 +559,12 @@ class AppState extends ChangeNotifier {
         }, onConflict: 'phone');
 
         await requestLocationAndNotificationPermissions();
+
+        // 👈 تحديث OneSignal Player ID للعميل فوراً عند حفظ بياناته
+        String? playerId = OneSignal.User.pushSubscription.id;
+        if (playerId != null && playerId.isNotEmpty) {
+          await supabase.from('customers').update({'onesignal_player_id': playerId}).eq('phone', phone);
+        }
       } catch (e) {
         debugPrint('❌ خطأ في حفظ العميل: $e');
       }
@@ -639,6 +674,13 @@ class AppState extends ChangeNotifier {
         'is_logged_in': false,
         'completed_orders': 0,
       });
+
+      // تحديث OneSignal Player ID للمندوب الجديد إذا أُضيف من جهازه الحالي
+      String? playerId = OneSignal.User.pushSubscription.id;
+      if (playerId != null && playerId.isNotEmpty) {
+        await supabase.from('couriers').update({'onesignal_player_id': playerId}).eq('phone', phone.trim());
+      }
+
       await fetchCouriersFromSupabase();
     } catch (e) {
       debugPrint('❌ خطأ في حفظ المندوب: $e');
@@ -658,6 +700,12 @@ class AppState extends ChangeNotifier {
 
       try {
         supabase.from('couriers').update({'is_logged_in': true}).eq('id', cId);
+
+        // 👈 تحديث OneSignal Player ID للمندوب تلقائياً عند تسجيل الدخول
+        String? courierPlayerId = OneSignal.User.pushSubscription.id;
+        if (courierPlayerId != null && courierPlayerId.isNotEmpty) {
+          supabase.from('couriers').update({'onesignal_player_id': courierPlayerId}).eq('id', cId);
+        }
       } catch (e) {
         debugPrint('⚠️ خطأ تحديث المندوب: $e');
       }
