@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart'; // 👈 أضفنا هذه لاستخدام زر فتح الخرائط بسلاسة
+import 'package:url_launcher/url_launcher.dart'; // 👈 لاستخدام زر فتح الخرائط بسلاسة
+import 'package:onesignal_flutter/onesignal_flutter.dart'; // 👈 استيراد مكتبة OneSignal لتحديث الـ Player ID
+import 'package:supabase_flutter/supabase_flutter.dart'; // 👈 استيراد سوبابيس لحفظ المعرّف
 import '../providers/app_state.dart';
 import 'package:fast/screens/chat_screen.dart';
 
@@ -22,7 +24,7 @@ class _CourierScreenState extends State<CourierScreen> {
     super.dispose();
   }
 
-  // 👈 دالة لفتح خرائط جوجل باستخدام العنوان النصي أو رابط البحث
+  // 🗺️ دالة لفتح خرائط جوجل باستخدام العنوان النصي أو رابط البحث
   Future<void> _openMap(String address) async {
     final query = Uri.encodeComponent(address.isNotEmpty ? address : 'Taiz, Yemen');
     final googleMapsUrl = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
@@ -119,12 +121,31 @@ class _CourierScreenState extends State<CourierScreen> {
                             minimumSize: const Size(double.infinity, 48),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          onPressed: () {
+                          onPressed: () async {
                             bool success = appState.loginCourier(_usernameController.text.trim(), _passwordController.text.trim());
-                            if (!success) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('فشل الدخول: إما بيانات غير صحيحة أو أن الحساب مفتوح في جلسة أخرى حالياً!')),
-                              );
+                            if (success) {
+                              // 👈 [تحديث OneSignal Player ID للمندوب تلقائياً عند تسجيل الدخول الناجح]
+                              try {
+                                String? playerId = OneSignal.User.pushSubscription.id;
+                                if (playerId != null && playerId.isNotEmpty && appState.currentCourier != null) {
+                                  String courierId = appState.currentCourier!['id']?.toString() ?? appState.currentCourier!['delivery_man_id']?.toString() ?? '';
+                                  if (courierId.isNotEmpty) {
+                                    await Supabase.instance.client
+                                        .from('couriers')
+                                        .update({'onesignal_player_id': playerId})
+                                        .eq('id', courierId);
+                                    debugPrint('✅ تم تحديث OneSignal Player ID للمندوب بنجاح: $playerId');
+                                  }
+                                }
+                              } catch (e) {
+                                debugPrint('⚠️ خطأ في تحديث Player ID للمندوب: $e');
+                              }
+                            } else {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('فشل الدخول: إما بيانات غير صحيحة أو أن الحساب مفتوح في جلسة أخرى حالياً!')),
+                                );
+                              }
                             }
                           },
                           child: const Text('دخول لوحة الطلبات 🚀', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
