@@ -5,15 +5,13 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class NotificationService {
-  // مفتاح REST API الخاص بـ OneSignal (ستجده في لوحة تحكم OneSignal تحت إعدادات Keys & IDs)
-  static const String _restApiKey = 'أضف_مفتاح_REST_API_هنا';
+  // مفتاح REST API الخاص بـ OneSignal الذي قمت بإنشائه
+  static const String _restApiKey = 'mzt7cwtzrud7vgcher53kfn6x';
   static const String _appId = '60850bed-4af8-4df1-a2f5-77411630f447';
 
-  /// 1. تهيئة الإشعارات عبر OneSignal وطلب الأذونات
+  /// 1. تهيئة الاستماع للإشعارات والنقر عليها
   static Future<void> initialize() async {
     try {
-      // التهيئة تمت في main.dart، وهنا نستمع للأحداث والضغط على الإشعارات
-      
       // الاستماع للنقر على الإشعار من المستخدم
       OneSignal.Notifications.addClickListener((event) {
         debugPrint('🚀 [النقر على الإشعار]: ${event.notification.title}');
@@ -30,15 +28,14 @@ class NotificationService {
     }
   }
 
-  /// 2. حفظ معرف الجهاز الحالي في قاعدة بيانات Supabase للمستخدم المسجل
+  /// 2. حفظ معرف الجهاز الحالي في جدول Supabase للمستخدم المسجل (عميل، مندوب، مشرف)
   static Future<void> saveUserPlayerId(String userId, String tableName) async {
     try {
-      // انتظار حتى يتم توليد الـ Player ID إذا لم يكن موجوداً بعد
       String? playerId = OneSignal.User.pushSubscription.id;
       
       if (playerId != null) {
         await Supabase.instance.client
-            .from(tableName) // مثل جداول profiles, drivers, customers
+            .from(tableName) // مثل جدول profiles, drivers, customers
             .update({'onesignal_player_id': playerId})
             .eq('id', userId);
         debugPrint("✅ تم حفظ OneSignal Player ID في جدول $tableName بنجاح");
@@ -48,7 +45,7 @@ class NotificationService {
     }
   }
 
-  /// 3. دالة عامة لإرسال إشعار إلى أي مستخدم (طلب، مندوب، مشرف، عميل، أو شات)
+  /// 3. دالة عامة لإرسال إشعار إلى أي مستخدم (طلب، مندوب، مشرف، عميل، أو شات مشترك)
   static Future<void> sendNotificationToUser({
     required String targetPlayerId,
     required String title,
