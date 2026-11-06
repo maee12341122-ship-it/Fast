@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../providers/app_state.dart';
+import '../../services/notification_service.dart'; // 👈 استيراد خدمة الإشعارات لتفعيل حفظ Player ID
 
 class PhoneAuthScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess;
@@ -304,7 +305,6 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey.shade800),
                         ),
-                        // 👇 تم تصحيح الخطأ هنا بنجاح وتوليد السطر بشكل نظيف 100%
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(color: primaryGold, width: 2),
@@ -334,17 +334,29 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       ),
                       onPressed: () async {
                         if (_nameController.text.trim().isNotEmpty && _addressController.text.trim().isNotEmpty) {
+                          // 1. حفظ بيانات المستخدم في قاعدة البيانات عبر الـ Provider
                           await appState.saveUserProfileDetails(
                             _nameController.text.trim(),
                             _addressController.text.trim(),
                           );
+                          
+                          // 2. طلب أذونات الموقع والإشعارات
                           await appState.requestLocationAndNotificationPermissions();
+
+                          // 3. 👈 حفظ OneSignal Player ID الخاص بهذا العميل في جدول قاعدة البيانات (customers أو profiles)
+                          if (appState.currentUserId != null) {
+                            await NotificationService.saveUserPlayerId(
+                              appState.currentUserId!, 
+                              'customers', 
+                            );
+                          }
 
                           if (widget.onLoginSuccess != null) {
                             widget.onLoginSuccess!();
                           } else {
                             Navigator.pop(context);
                           }
+                          
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('أهلاً بك! تم حفظ البيانات وتسجيل الدخول بنجاح 🎉')),
                           );
