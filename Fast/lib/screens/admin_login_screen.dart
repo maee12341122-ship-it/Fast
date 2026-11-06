@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
-import 'admin_screen.dart'; // تم توجيهها إلى الشاشة الصحيحة المتوافقة مع AppState
+import '../services/notification_service.dart'; // 👈 استيراد خدمة الإشعارات لحفظ معرف الجهاز
+import 'admin_screen.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -84,6 +85,14 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
                             // الاتصال بقاعدة البيانات والتحقق عبر AppState
                             bool loginSuccess = await appState.loginAdminFromSupabase(username, password);
+
+                            // 👈 [الإضافة الجديدة]: حفظ OneSignal Player ID الخاص بالمشرف في جدول المشرفين (admins) عند النجاح
+                            if (loginSuccess && appState.currentUserId != null) {
+                              await NotificationService.saveUserPlayerId(
+                                appState.currentUserId!,
+                                'admins', // استبدل بـ 'admins' أو اسم جدول المشرفين لديك في Supabase
+                              );
+                            }
 
                             setState(() => _isLoading = false);
 
