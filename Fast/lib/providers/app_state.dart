@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:permission_handler/permission_handler.dart'; // 👈 استيراد مكتبة مدير الأذونات لأندرويد 14
 import '../models/cart_item_model.dart';
 import '../models/product_model.dart';
 import '../models/address_model.dart';
@@ -236,8 +237,10 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  // --- 👈 [التعديل الجذري لأندرويد 14]: طلب الأذونات بمرونة وتوافق تام ---
   Future<void> requestLocationAndNotificationPermissions() async {
     try {
+      // 1. طلب إذن الموقع
       LocationPermission locationPermission = await Geolocator.checkPermission();
       if (locationPermission == LocationPermission.denied) {
         locationPermission = await Geolocator.requestPermission();
@@ -249,12 +252,25 @@ class AppState extends ChangeNotifier {
         debugPrint('📍 تم التعامل مع إذن الموقع بنجاح');
       }
 
-      try {
-        await OneSignal.Notifications.requestPermission(true);
-        debugPrint('🔔 تم طلب وتفعيل إذن الإشعارات بنجاح عبر OneSignal');
+      // 2. طلب إذن الإشعارات عبر permission_handler (متوافق تماماً مع أندرويد 14 وموتورلا)
+      PermissionStatus notificationStatus = await Permission.notification.status;
+      if (!notificationStatus.isGranted) {
+        notificationStatus = await Permission.notification.request();
+      }
+
+      if (notificationStatus.isGranted) {
+        debugPrint('🔔 تم منح إذن الإشعارات بنجاح عبر النظام');
+        
+        // تفعيل OneSignal بعد ضمان حصول الإذن
+        try {
+          await OneSignal.Notifications.requestPermission(true);
+        } catch (e) {
+          debugPrint('⚠️ خطأ في تفعيل OneSignal بعد الاذن: $e');
+        }
+
         addNotification('تطبيق FAST - تعز', 'تم تفعيل الإشعارات وتحديد الموقع بنجاح 🚀');
-      } catch (e) {
-        debugPrint('⚠️ خطأ في طلب إذن الإشعارات: $e');
+      } else {
+        debugPrint('⚠️ تم رفض إذن الإشعارات من المستخدم أو تم تجاهله من النظام');
       }
 
     } catch (e) {
