@@ -223,12 +223,6 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
         title: Text('تحديد رسوم التوصيل للطلب #$orderId', style: const TextStyle(color: AppConstants.gold, fontSize: 16)),
         content: Consumer<AppState>(
           builder: (context, state, child) {
-            // جلب أحدث بيانات الطلب والمندوبين بشكل لحظي Real-time داخل النافذة
-            final liveOrder = state.orders.firstWhere(
-              (o) => o['id'].toString() == orderId.toString(),
-              orElse: () => {},
-            );
-
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -306,11 +300,17 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                 orElse: () => {},
               );
 
-              // 3. إرسال إشعار فوري للعميل بأن السعر جاهز
+              // 3. إرسال إشعار فوري للعميل باستخدام رقم الهاتف (Phone) كمعرف في جدول customers
               try {
-                String? customerId = targetOrder['customer_id']?.toString() ?? targetOrder['user_id']?.toString();
-                if (customerId != null) {
-                  String? customerPlayerId = await appState.getPlayerIdForUser(customerId, 'customers');
+                String customerPhone = targetOrder['phone']?.toString() ?? '';
+                if (customerPhone.isNotEmpty) {
+                  final custRes = await appState.supabase
+                      .from('customers')
+                      .select('onesignal_player_id')
+                      .eq('phone', customerPhone)
+                      .maybeSingle();
+
+                  String? customerPlayerId = custRes?['onesignal_player_id']?.toString();
                   if (customerPlayerId != null && customerPlayerId.isNotEmpty) {
                     await NotificationService.sendNotificationToUser(
                       targetPlayerId: customerPlayerId,
