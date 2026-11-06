@@ -26,6 +26,110 @@ class AppState extends ChangeNotifier {
     listenToStoreSettingsRealtime();
   }
 
+  // --- دوال مساعدة لجلب OneSignal Player ID لمختلف الأطراف من قاعدة البيانات ---
+  
+  // 1. جلب Player ID للمستخدم (عميل، مندوب، مشرف)
+  Future<String?> getPlayerIdForUser(String userId, String tableName) async {
+    try {
+      final response = await supabase
+          .from(tableName)
+          .select('onesignal_player_id')
+          .eq('id', userId)
+          .maybeSingle();
+      
+      if (response != null && response['onesignal_player_id'] != null) {
+        return response['onesignal_player_id'].toString();
+      }
+    } catch (e) {
+      debugPrint('⚠️ خطأ في جلب Player ID للمستخدم من $tableName: $e');
+    }
+    return null;
+  }
+
+  // 2. جلب Player ID للمندوب بناءً على اسمه
+  Future<String?> getCourierPlayerIdByName(String courierName) async {
+    try {
+      final response = await supabase
+          .from('couriers') // أو drivers حسب جدول المناديب لديك
+          .select('onesignal_player_id')
+          .eq('name', courierName.trim())
+          .maybeSingle();
+
+      if (response != null && response['onesignal_player_id'] != null) {
+        return response['onesignal_player_id'].toString();
+      }
+    } catch (e) {
+      debugPrint('⚠️ خطأ في جلب Player ID للمندوب بالاسم: $e');
+    }
+    return null;
+  }
+
+  // 3. جلب معرفات جميع المشرفين لتنبيههم عند إلغاء أو رفض الطلبات
+  Future<List<String>> getAllAdminPlayerIds() async {
+    List<String> adminPlayerIds = [];
+    try {
+      final response = await supabase
+          .from('admins')
+          .select('onesignal_player_id');
+
+      if (response != null && response is List) {
+        for (var admin in response) {
+          if (admin['onesignal_player_id'] != null) {
+            adminPlayerIds.add(admin['onesignal_player_id'].toString());
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ خطأ في جلب معرفات المشرفين: $e');
+    }
+    return adminPlayerIds;
+  }
+
+  // 4. جلب معرف الطرف الآخر في المحادثة (الشات المشترك)
+  Future<String?> getReceiverPlayerIdForChat({
+    required String orderId,
+    required String senderRole,
+    required String targetChat,
+  }) async {
+    try {
+      final orderRes = await supabase
+          .from('orders')
+          .select('*')
+          .eq('id', orderId)
+          .maybeSingle();
+
+      if (orderRes == null) return null;
+
+      if (targetChat == 'admin_customer') {
+        if (senderRole == 'admin') {
+          String customerPhone = orderRes['phone']?.toString() ?? '';
+          if (customerPhone.isNotEmpty) {
+            final custRes = await supabase
+                .from('customers')
+                .select('onesignal_player_id')
+                .eq('phone', customerPhone)
+                .maybeSingle();
+            return custRes?['onesignal_player_id']?.toString();
+          }
+        } else {
+          List<String> admins = await getAllAdminPlayerIds();
+          return admins.isNotEmpty ? admins.first : null;
+        }
+      } else if (targetChat == 'admin_courier') {
+        if (senderRole == 'admin') {
+          String courierName = orderRes['assigned_courier']?.toString() ?? '';
+          return await getCourierPlayerIdByName(courierName);
+        } else {
+          List<String> admins = await getAllAdminPlayerIds();
+          return admins.isNotEmpty ? admins.first : null;
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ خطأ في تحديد المستقبل للشات: $e');
+    }
+    return null;
+  }
+
   // --- إعدادات أوقات الدوام والدعم ---
   int startHour = 8;
   int endHour = 24;
@@ -82,10 +186,9 @@ class AppState extends ChangeNotifier {
 
   // --- إرسال رمز التحقق الاحترافي عبر Meta Cloud API (WhatsApp Business) ---
   Future<void> sendOtpViaMetaCloudApi({
-    required String recipientPhoneNumber, // رقم هاتف العميل (مثلاً: 775145534)
-    required String otpCode,            // رمز التحقق (مثل: 4829)
+    required String recipientPhoneNumber,
+    required String otpCode,
   }) async {
-    // 1. تنظيف الرقم وتنسيقه دولياً لليمن تلقائياً (967...)
     String cleanPhone = recipientPhoneNumber.trim().replaceAll(' ', '');
     if (cleanPhone.startsWith('0')) {
       cleanPhone = cleanPhone.substring(1);
@@ -94,10 +197,7 @@ class AppState extends ChangeNotifier {
       cleanPhone = '967$cleanPhone';
     }
 
-    // 2. معرّف رقم الهاتف الثابت من لوحة تحكم ميتا
     final String phoneNumberId = '1517410681448211'; 
-    
-    // 3. رمز الوصول المؤقت والجديد
     final String accessToken = 'EAAeqnZC78m0EBS6hiW4S9quwmMjbFvrahDPgvfqakZBEIZAZAhMfiDVcSVVFCX8TK0GZBghYTZAr2cOmZAlzbZBTgNfFqMvM84gIXJ8aJbSnnY7gNmDHEB3OmoVXLs0w1JMUwFNNIPLCtsm2pWWEkUr7U3q3orJ6ugwYVqsYQ7fHfrfLf92PZA6Kqr1JlTTXFjvW4sQWcqpygZCM2ZBNrc8aisdBFa1ZAR901hCPqsTe6cUZD';
 
     final url = Uri.parse('https://graph.facebook.com/v18.0/$phoneNumberId/messages');
@@ -107,7 +207,6 @@ class AppState extends ChangeNotifier {
       'Content-Type': 'application/json',
     };
 
-    // تجهيز رسالة الـ OTP كرسالة نصية مباشرة عبر ميتا
     final body = jsonEncode({
       "messaging_product": "whatsapp",
       "recipient_type": "individual",
@@ -308,6 +407,8 @@ class AppState extends ChangeNotifier {
 
   dynamic get user => userProfile == null ? null : _UserMock(userProfile!['name'] ?? '', userProfile!['phone'] ?? '');
 
+  String? get currentUserId => userProfile?['phone'];
+
   void _loadUserSession() async {
     final prefs = await SharedPreferences.getInstance();
     final phone = prefs.getString('userPhone');
@@ -366,7 +467,6 @@ class AppState extends ChangeNotifier {
     final randomOtp = (100000 + Random().nextInt(900000)).toString();
     generatedDynamicOtp = randomOtp;
     
-    // إرسال الرمز فعلياً عبر Meta Cloud API تلقائياً
     String cleanPhone = _normalizePhone(phone);
     sendOtpViaMetaCloudApi(
       recipientPhoneNumber: cleanPhone,
