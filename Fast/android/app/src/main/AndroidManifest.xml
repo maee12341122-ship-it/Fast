@@ -32,7 +32,7 @@
         <!-- 🔑 مفتاح خريطة جوجل الحقيقية -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="ضع_مفتاح_الـ_API_الخاص_بك_هنا" />
+            android:value="AIzaSyAenrGTzNH1BcjBEKCv6g0TwKkMTg3V7I0" />
 
         <activity
             android:name=".MainActivity"
