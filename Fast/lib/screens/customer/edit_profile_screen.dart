@@ -114,10 +114,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               GestureDetector(
                 onTap: () async {
                   // الانتقال إلى شاشة خريطة جوجل واستقبال خريطة البيانات (العنوان + الإحداثيات) عند العودة
-                  final result = await Navigator.push>(
-                    context,
-                    MaterialPageRoute(builder: (_) => const MapLocationScreen()),
-                  );
+                  final result = await Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => const MapLocationScreen(),
+  ),
+);
 
                   if (result != null) {
                     final address = result['address'] as String?;
