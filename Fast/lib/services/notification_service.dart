@@ -1,47 +1,91 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:http/http.dart' as http;
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class NotificationService {
-  /// 👈 تهيئة الإشعارات عبر Firebase وطلب الأذونات بدون أي ملفات أندرويد
+  // مفتاح REST API الخاص بـ OneSignal (ستجده في لوحة تحكم OneSignal تحت إعدادات Keys & IDs)
+  static const String _restApiKey = 'أضف_مفتاح_REST_API_هنا';
+  static const String _appId = '60850bed-4af8-4df1-a2f5-77411630f447';
+
+  /// 1. تهيئة الإشعارات عبر OneSignal وطلب الأذونات
   static Future<void> initialize() async {
     try {
-      await requestNotificationPermission();
-
-      // الاستماع للإشعارات في الواجهة الأمامية
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        debugPrint('🔔 [إشعار مباشر]: ${message.notification?.title} - ${message.notification?.body}');
+      // التهيئة تمت في main.dart، وهنا نستمع للأحداث والضغط على الإشعارات
+      
+      // الاستماع للنقر على الإشعار من المستخدم
+      OneSignal.Notifications.addClickListener((event) {
+        debugPrint('🚀 [النقر على الإشعار]: ${event.notification.title}');
+        // يمكنك هنا توجيه المستخدم للشاشة المناسبة بناءً على البيانات المرسلة
       });
 
-      // التعامل مع النقر على الإشعار
-      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        debugPrint('🚀 [النقر على الإشعار]: ${message.data}');
-      });
+      // طباعة معرف الجهاز الحالي للتأكد
+      String? playerId = OneSignal.User.pushSubscription.id;
+      debugPrint('📱 [OneSignal Player ID]: $playerId');
 
-      String? token = await FirebaseMessaging.instance.getToken();
-      debugPrint('📱 [FCM Token]: $token');
-
-      debugPrint('🟢 تم تهيئة نظام الإشعارات بنجاح');
+      debugPrint('🟢 تم تهيئة نظام الإشعارات (OneSignal) بنجاح');
     } catch (e) {
       debugPrint('⚠️ خطأ في تهيئة الإشعارات: $e');
     }
   }
 
-  /// 👈 طلب إذن الإشعارات من النظام
-  static Future<bool> requestNotificationPermission() async {
+  /// 2. حفظ معرف الجهاز الحالي في قاعدة بيانات Supabase للمستخدم المسجل
+  static Future<void> saveUserPlayerId(String userId, String tableName) async {
     try {
-      var status = await Permission.notification.status;
-      if (!status.isGranted) {
-        status = await Permission.notification.request();
+      // انتظار حتى يتم توليد الـ Player ID إذا لم يكن موجوداً بعد
+      String? playerId = OneSignal.User.pushSubscription.id;
+      
+      if (playerId != null) {
+        await Supabase.instance.client
+            .from(tableName) // مثل جداول profiles, drivers, customers
+            .update({'onesignal_player_id': playerId})
+            .eq('id', userId);
+        debugPrint("✅ تم حفظ OneSignal Player ID في جدول $tableName بنجاح");
       }
-      return status.isGranted;
     } catch (e) {
-      debugPrint('⚠️ خطأ في طلب إذن الإشعارات: $e');
-      return false;
+      debugPrint("⚠️ خطأ في حفظ Player ID في Supabase: $e");
     }
   }
 
-  /// 👈 دالة فارغة توافقية (Firebase سيقوم بعرض الإشعار في الشريط تلقائياً)
+  /// 3. دالة عامة لإرسال إشعار إلى أي مستخدم (طلب، مندوب، مشرف، عميل، أو شات)
+  static Future<void> sendNotificationToUser({
+    required String targetPlayerId,
+    required String title,
+    required String body,
+  }) async {
+    try {
+      if (targetPlayerId.isEmpty) {
+        debugPrint("⚠️ لا يمكن إرسال إشعار: Player ID فارغ");
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('https://onesignal.com/api/v1/notifications'),
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Basic $_restApiKey',
+        },
+        body: jsonEncode({
+          'app_id': _appId,
+          'include_player_ids': [targetPlayerId],
+          'headings': {'en': title},
+          'contents': {'en': body},
+          'android_channel_id': 'high_importance_channel',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint("📨 تم إرسال الإشعار بنجاح عبر OneSignal");
+      } else {
+        debugPrint("⚠️ فشل إرسال الإشعار: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("⚠️ خطأ في الاتصال أثناء إرسال الإشعار: $e");
+    }
+  }
+
+  /// 4. دالة توافقية لإظهار إشعار محلي عند الحاجة
   static Future<void> showLocalNotification(String title, String body) async {
     debugPrint('📢 [FAST Notification]: $title - $body');
   }
