@@ -3,6 +3,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    
+    <!-- 🔔 [إضافة ضرورية لأندرويد 13 و 14]: صلاحية الإشعارات لضمان ظهور النافذة في موتورلا وبقية الأجهزة -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- للسماح بنظام أندرويد 11+ بفتح روابط الواتساب والروابط الخارجية -->
     <queries>
@@ -13,6 +16,11 @@
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="http" />
+        </intent>
+        <!-- إذن استعلام تطبيق واتساب مباشرة -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="whatsapp" />
         </intent>
     </queries>
 
