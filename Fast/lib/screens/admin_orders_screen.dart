@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import '../widgets/empty_state.dart';
-import '../services/notification_service.dart'; // 👈 استيراد خدمة الإشعارات لإرسال التنبيهات للعميل والمندوب
+import '../services/notification_service.dart';
 
 class AdminOrdersScreen extends StatefulWidget {
   final VoidCallback? onOpenDrawer;
@@ -51,18 +51,16 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                   final assignedCourier = order['assigned_courier']?.toString() ?? 'لم يتم التعيين';
                   final adminMessage = order['admin_message']?.toString() ?? '';
 
-                  // بيانات الدفع
                   final paymentMethod = order['payment_method']?.toString() ?? 'cash';
                   final paymentAccount = order['payment_account']?.toString() ?? '';
                   final paymentDisplay = paymentMethod == 'cash'
                       ? '💵 نقداً عند الاستلام (Cash)'
                       : '💳 محفظة إلكترونية ($paymentMethod) - حساب: $paymentAccount';
 
-                  // 👈 الاعتماد على حالة الطلب في سوبابيس لمعرفة هل تم التسعير أم لا بشكل تلقائي ولحظي
                   bool isAlreadyPriced = status != 'waitingForPricing';
 
                   return AnimatedContainer(
-                    key: ValueKey(orderId), // 👈 مفتاح فريد لمنع تداخل الحالة واختفاء المشاكل البصرية
+                    key: ValueKey(orderId),
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
                     child: Card(
@@ -179,8 +177,6 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                               Text('💬 حالة المشرف: $adminMessage', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                             ],
                             const SizedBox(height: 14),
-
-                            // --- زر تحديد أو تحديث رسوم التوصيل ---
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
@@ -209,7 +205,6 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
     );
   }
 
-  // --- نافذة إدخال رسوم التوصيل مع إرسال التنبيهات ---
   void _showPricingDialog(BuildContext context, AppState appState, Map<String, dynamic> order, dynamic orderId, double currentFee) {
     final feeController = TextEditingController(text: currentFee > 0 ? currentFee.toString() : '');
     String? selectedCourier = order['assigned_courier'] != 'لم يتم التعيين' ? order['assigned_courier'] : null;
@@ -286,14 +281,14 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                 return;
               }
 
-              // 1. حفظ التحديثات في قاعدة البيانات عبر الـ Provider
+              // 1. حفظ التحديثات في قاعدة البيانات
               appState.setOrderDeliveryFee(orderId, fee, selectedCourier!);
 
-              // 2. 👈 [الإضافة الجديدة]: جلب الـ Player ID الخاص بالعميل وإرسال إشعار فوري بأن السعر جاهز
+              // 2. إرسال إشعار للعميل عبر رقم الهاتف
               try {
-                String? customerId = order['customer_id']?.toString() ?? order['user_id']?.toString();
-                if (customerId != null) {
-                  String? customerPlayerId = await appState.getPlayerIdForUser(customerId, 'customers');
+                String customerPhone = order['phone']?.toString() ?? '';
+                if (customerPhone.isNotEmpty) {
+                  String? customerPlayerId = await appState.getPlayerIdForUser(customerPhone, 'customers');
                   if (customerPlayerId != null && customerPlayerId.isNotEmpty) {
                     await NotificationService.sendNotificationToUser(
                       targetPlayerId: customerPlayerId,
@@ -306,7 +301,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                 debugPrint('⚠️ خطأ في إرسال إشعار للعميل: $e');
               }
 
-              // 3. 👈 إرسال إشعار للمندوب بأنه تم إسناد طلب جديد إليه
+              // 3. إرسال إشعار للمندوب
               try {
                 String? courierPlayerId = await appState.getCourierPlayerIdByName(selectedCourier!);
                 if (courierPlayerId != null && courierPlayerId.isNotEmpty) {
