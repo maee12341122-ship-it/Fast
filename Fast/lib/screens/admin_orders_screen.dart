@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import '../widgets/empty_state.dart';
+import '../services/notification_service.dart'; // 👈 استيراد خدمة الإشعارات لإرسال التنبيهات للعميل والمندوب
 
 class AdminOrdersScreen extends StatefulWidget {
   final VoidCallback? onOpenDrawer;
@@ -189,7 +190,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
-                                onPressed: () => _showPricingDialog(context, appState, orderId, deliveryFee),
+                                onPressed: () => _showPricingDialog(context, appState, order, orderId, deliveryFee),
                                 icon: Icon(isAlreadyPriced ? Icons.edit : Icons.local_shipping),
                                 child: Text(
                                   isAlreadyPriced ? 'تعديل رسوم التوصيل والمندوب 🔄' : 'تحديد رسوم التوصيل وإسناد المندوب 🚀', 
@@ -208,10 +209,10 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
     );
   }
 
-  // --- نافذة إدخال رسوم التوصيل ---
-  void _showPricingDialog(BuildContext context, AppState appState, dynamic orderId, double currentFee) {
+  // --- نافذة إدخال رسوم التوصيل مع إرسال التنبيهات ---
+  void _showPricingDialog(BuildContext context, AppState appState, Map<String, dynamic> order, dynamic orderId, double currentFee) {
     final feeController = TextEditingController(text: currentFee > 0 ? currentFee.toString() : '');
-    String? selectedCourier;
+    String? selectedCourier = order['assigned_courier'] != 'لم يتم التعيين' ? order['assigned_courier'] : null;
 
     showDialog(
       context: context,
@@ -270,7 +271,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
               foregroundColor: Colors.black,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            onPressed: () {
+            onPressed: () async {
               double fee = double.tryParse(feeController.text) ?? 0.0;
               if (fee <= 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -285,8 +286,39 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
                 return;
               }
 
-              // حفظ التحديثات وإرسالها لقاعدة البيانات
+              // 1. حفظ التحديثات في قاعدة البيانات عبر الـ Provider
               appState.setOrderDeliveryFee(orderId, fee, selectedCourier!);
+
+              // 2. 👈 [الإضافة الجديدة]: جلب الـ Player ID الخاص بالعميل وإرسال إشعار فوري بأن السعر جاهز
+              try {
+                String? customerId = order['customer_id']?.toString() ?? order['user_id']?.toString();
+                if (customerId != null) {
+                  String? customerPlayerId = await appState.getPlayerIdForUser(customerId, 'customers');
+                  if (customerPlayerId != null && customerPlayerId.isNotEmpty) {
+                    await NotificationService.sendNotificationToUser(
+                      targetPlayerId: customerPlayerId,
+                      title: 'تم تسعير طلبك #${orderId} 📦',
+                      body: 'رسوم التوصيل: $fee ر.ي. قم بمراجعة السعر وقبول الطلب.',
+                    );
+                  }
+                }
+              } catch (e) {
+                debugPrint('⚠️ خطأ في إرسال إشعار للعميل: $e');
+              }
+
+              // 3. 👈 إرسال إشعار للمندوب بأنه تم إسناد طلب جديد إليه
+              try {
+                String? courierPlayerId = await appState.getCourierPlayerIdByName(selectedCourier!);
+                if (courierPlayerId != null && courierPlayerId.isNotEmpty) {
+                  await NotificationService.sendNotificationToUser(
+                    targetPlayerId: courierPlayerId,
+                    title: 'طلب جديد مسند إليك 🛵',
+                    body: 'تم إسناد الطلب #${orderId} إليك للتوصيل.',
+                  );
+                }
+              } catch (e) {
+                debugPrint('⚠️ خطأ في إرسال إشعار للمندوب: $e');
+              }
               
               Navigator.pop(dialogContext);
 
