@@ -4,7 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart'; // 👈 استيراد 
 import 'package:onesignal_flutter/onesignal_flutter.dart'; // 👈 استيراد مكتبة OneSignal
 import '../../providers/app_state.dart';
 import '../../services/notification_service.dart'; 
-import 'map_location_screen.dart'; // 👈 استدعاء شاشة الخريطة التفاعلية
+import '../customer/map_location_screen.dart';
+// 👈 استدعاء شاشة الخريطة التفاعلية
 
 class PhoneAuthScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess;
