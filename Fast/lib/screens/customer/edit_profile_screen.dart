@@ -43,7 +43,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFF121212),
         appBar: AppBar(
-          // 💡 تم إزالة const لتجنب أخطاء وقت الترجمة مع الألوان المعرفة
           title: Text('تعديل الحساب الشخصي ⚙️', style: TextStyle(color: AppConstants.gold, fontWeight: FontWeight.bold)),
           backgroundColor: const Color(0xFF1E1E1E),
           iconTheme: IconThemeData(color: AppConstants.gold),
@@ -114,19 +113,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // 👈 عنصر خريطة تفاعلي ينقل المستخدم إلى MapLocationScreen عند النقر
               GestureDetector(
                 onTap: () async {
-                  // الانتقال إلى شاشة خريطة جوجل واستقبال العنوان المختار عند العودة
-                  final selectedAddress = await Navigator.push<String>(
+                  // الانتقال إلى شاشة خريطة جوجل واستقبال خريطة البيانات (العنوان + الإحداثيات) عند العودة
+                  final result = await Navigator.push>(
                     context,
                     MaterialPageRoute(builder: (_) => const MapLocationScreen()),
                   );
 
-                  if (selectedAddress != null && selectedAddress.isNotEmpty) {
+                  if (result != null) {
+                    final address = result['address'] as String?;
+                    final latLng = result['latLng'];
+
                     setState(() {
-                      _addressController.text = selectedAddress;
+                      if (address != null && address.isNotEmpty) {
+                        // دمج العنوان النصي مع الإحداثيات إن وجدت
+                        if (latLng != null) {
+                          _addressController.text = '$address (الإحداثيات: ${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)})';
+                        } else {
+                          _addressController.text = address;
+                        }
+                      }
                     });
+
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('تم تحديث العنوان الإحداثي بنجاح! 📍')),
+                        const SnackBar(content: Text('تم تحديث العنوان والإحداثيات بنجاح! 📍')),
                       );
                     }
                   }
