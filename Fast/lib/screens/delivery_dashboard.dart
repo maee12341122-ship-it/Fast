@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart'; // 👈 لمسار فتح الخرائط الخارجية
 import '../providers/app_state.dart';
 import '../utils/constants.dart';
 import 'package:fast/screens/chat_screen.dart';
-
 
 class DeliveryDashboard extends StatefulWidget {
   final String courierId;
@@ -21,6 +21,34 @@ class DeliveryDashboard extends StatefulWidget {
 
 class _DeliveryDashboardState extends State<DeliveryDashboard> {
   String _status = 'available';
+
+  // 🗺️ دالة لفتح خرائط جوجل مباشرة وإرشاد المندوب للإحداثيات المستهدفة
+  Future<void> _openNavigation(String addressText) async {
+    // محاولة استخراج الإحداثيات إن وجدت في نص العنوان (مثال: الإحداثيات: 13.5779, 44.0219)
+    final regExp = RegExp(r'الإحداثيات:\s*([0-9\.]+),\s*([0-9\.]+)');
+    final match = regExp.firstMatch(addressText);
+
+    Uri url;
+    if (match != null) {
+      final lat = match.group(1);
+      final lng = match.group(2);
+      // فتح الخريطة بالدبوس المباشر للإحداثيات
+      url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    } else {
+      // إذا لم توجد إحداثيات، يتم البحث بالنص (العنوان المكتوب في تعز)
+      url = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(addressText)}');
+    }
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح تطبيق خرائط جوجل')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,6 +194,22 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
                                   Text('العنوان: $address', style: const TextStyle(color: Colors.white70)),
                                   const SizedBox(height: 6),
                                   Text('المنتجات: $itemsDesc', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                                  const SizedBox(height: 8),
+
+                                  // 👈 زر التوجيه عبر خرائط جوجل للمندوب
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.lightBlueAccent,
+                                        side: const BorderSide(color: Colors.lightBlueAccent),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                      onPressed: () => _openNavigation(address),
+                                      icon: const Icon(Icons.navigation, size: 16),
+                                      label: const Text('التوجيه إلى موقع العميل عبر الخريطة 🧭', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
 
                                   // 👈 حاوية توضيح طريقة الدفع للمندوب
