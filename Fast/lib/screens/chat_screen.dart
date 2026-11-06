@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
+import '../services/notification_service.dart'; // 👈 استيراد خدمة الإشعارات لإرسال التنبيهات الفورية
 
 class ChatScreen extends StatefulWidget {
   final String orderId;
@@ -130,15 +131,41 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.send, color: Colors.amber),
-                    onPressed: () {
-                      if (_msgController.text.trim().isNotEmpty) {
-                        appState.sendChatMessage(
+                    onPressed: () async {
+                      final text = _msgController.text.trim();
+                      if (text.isNotEmpty) {
+                        // 1. إرسال وحفظ الرسالة في قاعدة البيانات عبر الـ Provider
+                        await appState.sendChatMessage(
                           widget.orderId,
                           widget.userRole,
                           widget.targetChat,
-                          _msgController.text,
+                          text,
                         );
+
                         _msgController.clear();
+
+                        // 2. 👈 [الإضافة الجديدة]: جلب معرف الطرف الآخر وإرسال إشعار فوري عبر OneSignal
+                        try {
+                          String? receiverPlayerId = await appState.getReceiverPlayerIdForChat(
+                            orderId: widget.orderId,
+                            senderRole: widget.userRole,
+                            targetChat: widget.targetChat,
+                          );
+
+                          if (receiverPlayerId != null && receiverPlayerId.isNotEmpty) {
+                            String senderName = widget.userRole == 'admin' 
+                                ? 'الإدارة' 
+                                : (widget.userRole == 'courier' ? 'المندوب' : 'العميل');
+
+                            await NotificationService.sendNotificationToUser(
+                              targetPlayerId: receiverPlayerId,
+                              title: 'رسالة جديدة في الطلب #${widget.orderId} 💬',
+                              body: '$senderName: $text',
+                            );
+                          }
+                        } catch (e) {
+                          debugPrint('⚠️ خطأ في إرسال إشعار الشات: $e');
+                        }
                       }
                     },
                   ),
