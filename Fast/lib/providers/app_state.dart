@@ -660,35 +660,35 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // 👈 [التعديل هنا]: إضافة المندوب مباشرة وبدون قيود معقدة لتتم من شاشة المشرف فوراً
   Future<void> addCourier(String name, String phone, String username, String password) async {
     try {
-      final courierId = 'D-00${couriers.length + 1}';
+      final int nextIndex = couriers.length + 1;
+      final courierId = 'D-${nextIndex.toString().padLeft(3, '0')}';
+
       await supabase.from('couriers').insert({
         'id': courierId,
         'delivery_man_id': courierId,
-        'username': username,
-        'password': password,
-        'name': name,
-        'phone': phone,
+        'username': username.trim().toLowerCase(),
+        'password': password.trim(),
+        'name': name.trim(),
+        'phone': phone.trim(),
         'status': 'available',
         'is_logged_in': false,
         'completed_orders': 0,
       });
 
-      // تحديث OneSignal Player ID للمندوب الجديد إذا أُضيف من جهازه الحالي
-      String? playerId = OneSignal.User.pushSubscription.id;
-      if (playerId != null && playerId.isNotEmpty) {
-        await supabase.from('couriers').update({'onesignal_player_id': playerId}).eq('phone', phone.trim());
-      }
-
       await fetchCouriersFromSupabase();
+      notifyListeners();
+      debugPrint('✅ تم إضافة المندوب بنجاح من شاشة المشرف');
     } catch (e) {
       debugPrint('❌ خطأ في حفظ المندوب: $e');
+      rethrow;
     }
   }
 
   bool loginCourier(String username, String password) {
-    final index = couriers.indexWhere((c) => c['username'].toString().trim() == username.trim() && c['password'].toString().trim() == password.trim());
+    final index = couriers.indexWhere((c) => c['username'].toString().trim().toLowerCase() == username.trim().toLowerCase() && c['password'].toString().trim() == password.trim());
     if (index != -1) {
       couriers[index]['is_logged_in'] = true;
       currentCourier = couriers[index];
